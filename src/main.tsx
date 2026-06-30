@@ -57,6 +57,7 @@ const defaultShopee: ShopeeInput = {
   useInsurance: false,
   usePph: true,
   adCost: 0,
+  adDiscountType: "auto",
   targetMargin: 20,
   competitorPrice: 0,
 };
@@ -89,6 +90,7 @@ const defaultRows: ShopeeRow[] = [
     useInsurance: false,
     usePph: true,
     adCost: 0,
+    adDiscountType: "auto",
     adminCategory: "Pakaian Pria Lainnya",
     targetMargin: 20,
     competitorPrice: 0,
@@ -334,6 +336,13 @@ function ShopeeSingle() {
           <Field label="Biaya Iklan per Produk (Rp)">
             <NumberInput value={input.adCost} min={0} onChange={(value) => patch("adCost", value)} />
           </Field>
+          <Field label="Promo Iklan (Diskon Gratis Ongkir 1.5%)">
+            <select value={input.adDiscountType} onChange={(e) => patch("adDiscountType", e.target.value)}>
+              <option value="auto">Otomatis (Aktif jika Iklan &gt;= 3% Omset)</option>
+              <option value="active">Selalu Aktif (Potong 1.5%)</option>
+              <option value="inactive">Non-aktif (0%)</option>
+            </select>
+          </Field>
 
           {/* Section 2: Layanan & Program Shopee */}
           <div className="form-section-title">🛍️ Layanan & Program Shopee</div>
@@ -570,6 +579,11 @@ function ShopeeResults({ result, input }: { result: ReturnType<typeof calculateS
           <tr className="deduction">
             <td>
               Gratis Ongkir Xtra
+              {result.useAdDiscount && (
+                <div style={{ fontSize: '10px', color: '#1d6f52', fontWeight: '600', marginTop: '2px' }}>
+                  🎉 Diskon Iklan 1.5% Aktif! (Normal: {formatPercent(result.originalFreeShippingRate)})
+                </div>
+              )}
               {result.usedAutoShipping && (
                 <div style={{ fontSize: '10px', color: '#68746e', marginTop: '2px' }}>
                   {result.isSpecialSize ? "Ukuran Khusus" : "Ukuran Biasa"} ({input.packageWeight}kg, {input.packageLength}x{input.packageWidth}x{input.packageHeight}cm)

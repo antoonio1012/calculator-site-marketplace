@@ -39,6 +39,7 @@ export type ShopeeInput = {
   
   // Ads
   adCost: number; // Rp
+  adDiscountType: "auto" | "active" | "inactive";
   
   desiredProfit?: number;
   targetMargin?: number;
@@ -116,6 +117,7 @@ export function calculateShopee(input: Partial<ShopeeInput> & { cost: number; ta
     useInsurance = false,
     usePph = true,
     adCost = 0,
+    adDiscountType = "auto",
     targetMargin = 20,
   } = input;
 
@@ -159,35 +161,45 @@ export function calculateShopee(input: Partial<ShopeeInput> & { cost: number; ta
     freeShippingCap = freeShippingOption.cap;
     isSpecialSize = freeShippingOption.name.includes("Khusus");
   }
-  const freeShippingFee = Math.min(finalPrice * freeShippingRate, freeShippingCap);
 
-  // 3. Promo Xtra
+  // 3. Ad Discount Program (Promo Khusus Pengguna Iklan): 1.5% off on Free Shipping rate if Ads Cost >= 3% of GMV (0.5% for high-value categories)
+  const acos = finalPrice > 0 ? (adCost / finalPrice) * 100 : 0;
+  const roas = adCost > 0 ? finalPrice / adCost : 0;
+
+  const isHighValue = adminCategory.includes("Handphone") || adminCategory.includes("Tablet") || adminCategory.includes("Laptop") || adminCategory.includes("Logam Mulia") || adminCategory.includes("Perhiasan");
+  const adDiscountThreshold = isHighValue ? 0.5 : 3.0;
+  const useAdDiscount = adDiscountType === "active" || (adDiscountType === "auto" && acos >= adDiscountThreshold);
+
+  const finalFreeShippingRate = useAdDiscount ? Math.max(0, freeShippingRate - 0.015) : freeShippingRate;
+  const freeShippingFee = Math.min(finalPrice * finalFreeShippingRate, freeShippingCap);
+
+  // 4. Promo Xtra
   const promoRate = getPromoRate(promo);
   const promoCap = promo === "Promo Xtra+" ? 80000 : 60000;
   const promoFee = Math.min(finalPrice * promoRate, promoCap);
 
-  // 4. Pre-Order & Processing Fees
+  // 5. Pre-Order & Processing Fees
   const preOrderRate = getPreOrderRate(preOrder);
   const preOrderFee = finalPrice * preOrderRate;
   const processingFee = finalPrice > 0 ? 1250 : 0;
 
-  // 5. Payment Transaction Fee
+  // 6. Payment Transaction Fee
   const paymentFee = finalPrice * (paymentRate / 100);
 
-  // 6. Optional program fees
+  // 7. Optional program fees
   const hematFee = useHemat && finalPrice > 0 ? 350 : 0;
   const insuranceFee = useInsurance ? finalPrice * 0.005 : 0;
 
-  // 7. Summarize total fees before tax
+  // 8. Summarize total fees before tax
   const totalFees = adminFee + freeShippingFee + promoFee + processingFee + preOrderFee + paymentFee + hematFee + insuranceFee;
   const feeRate = finalPrice > 0 ? totalFees / finalPrice : 0;
   const sellerReceives = finalPrice - totalFees;
 
-  // 8. Affiliate Fee calculated based on Buyer Payment Value (net of platform discount voucher)
+  // 9. Affiliate Fee calculated based on Buyer Payment Value (net of platform discount voucher)
   const buyerPayment = Math.max(0, finalPrice - platformDiscount);
   const affiliateFee = buyerPayment * (affiliateRate / 100);
 
-  // 9. Taxes
+  // 10. Taxes
   const tax = usePph ? sellerReceives * 0.005 : 0; // PPh 0.5%
 
   let ppnFee = 0;
@@ -204,12 +216,9 @@ export function calculateShopee(input: Partial<ShopeeInput> & { cost: number; ta
   const sellerReceivesAfterTax = sellerReceives - tax;
   const sellerReceivesAfterTaxAndAffiliate = sellerReceives - tax - affiliateFee - ppnFee;
   
-  // 10. Ads cost and metrics
+  // 11. Ads cost and metrics
   const profit = sellerReceivesAfterTaxAndAffiliate - cost - adCost;
   const margin = sellerReceivesAfterTaxAndAffiliate > 0 ? profit / sellerReceivesAfterTaxAndAffiliate : 0;
-  
-  const acos = finalPrice > 0 ? (adCost / finalPrice) * 100 : 0;
-  const roas = adCost > 0 ? finalPrice / adCost : 0;
 
   let recommendedPrice = 0;
   if (!skipRecommend) {
@@ -241,8 +250,9 @@ export function calculateShopee(input: Partial<ShopeeInput> & { cost: number; ta
     finalPrice,
     adminRate,
     adminFee,
-    freeShippingRate,
+    freeShippingRate: finalFreeShippingRate,
     freeShippingFee,
+    originalFreeShippingRate: freeShippingRate,
     promoRate,
     promoFee,
     processingFee,
@@ -266,6 +276,8 @@ export function calculateShopee(input: Partial<ShopeeInput> & { cost: number; ta
     recommendedPrice,
     isSpecialSize,
     usedAutoShipping,
-    buyerPayment
+    buyerPayment,
+    useAdDiscount,
+    adDiscountThreshold
   };
 }

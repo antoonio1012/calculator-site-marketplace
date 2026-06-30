@@ -98,21 +98,23 @@ describe("Shopee calculator", () => {
     expect(result.adminFee).toBe(14375);
     
     expect(result.isSpecialSize).toBe(true);
-    expect(result.freeShippingRate).toBe(0.075);
-    expect(result.freeShippingFee).toBe(9375);
+    expect(result.useAdDiscount).toBe(true);
+    expect(result.originalFreeShippingRate).toBe(0.075);
+    expect(result.freeShippingRate).toBe(0.06);
+    expect(result.freeShippingFee).toBe(7500);
     
     expect(result.promoFee).toBe(5625);
     expect(result.paymentFee).toBe(2500);
     expect(result.processingFee).toBe(1250);
     
-    expect(result.totalFees).toBe(33125);
-    expect(result.sellerReceives).toBe(91875);
+    expect(result.totalFees).toBe(31250);
+    expect(result.sellerReceives).toBe(93750);
     expect(result.affiliateFee).toBe(5750);
-    expect(result.tax).toBe(459.375);
-    expect(result.ppnFee).toBe(3643.75);
+    expect(result.tax).toBe(468.75);
+    expect(result.ppnFee).toBe(3437.5);
     
-    expect(result.sellerReceivesAfterTaxAndAffiliate).toBeCloseTo(82021.88, 1);
-    expect(result.profit).toBeCloseTo(11021.88, 1);
+    expect(result.sellerReceivesAfterTaxAndAffiliate).toBeCloseTo(84093.75, 1);
+    expect(result.profit).toBeCloseTo(13093.75, 1);
     expect(result.acos).toBe(4.0);
     expect(result.roas).toBe(25.0);
   });
