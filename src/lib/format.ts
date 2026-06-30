@@ -11,10 +11,27 @@ export function formatPercent(value: number, digits = 2) {
   })}%`;
 }
 
-export function toNumber(value: unknown) {
+export function toNumber(value: unknown): number {
   if (typeof value === "number") return Number.isFinite(value) ? value : 0;
   if (typeof value !== "string") return 0;
-  const normalized = value.replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", ".");
+  
+  let normalized = value.trim();
+  
+  const hasDot = normalized.includes(".");
+  const hasComma = normalized.includes(",");
+  
+  if (hasDot && !hasComma) {
+    const parts = normalized.split(".");
+    const lastPart = parts[parts.length - 1];
+    const isThousandSeparator = lastPart.length === 3 && !normalized.startsWith("0.");
+    
+    if (!isThousandSeparator) {
+      const parsed = parseFloat(normalized);
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
+  }
+  
+  normalized = normalized.replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", ".");
   const parsed = Number(normalized);
   return Number.isFinite(parsed) ? parsed : 0;
 }
