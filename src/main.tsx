@@ -117,20 +117,52 @@ function NumberInput({
   onChange,
   step = 1000,
   min,
+  isCurrency = false,
 }: {
   value: number;
   onChange: (value: number) => void;
   step?: number;
   min?: number;
+  isCurrency?: boolean;
 }) {
-  const [localValue, setLocalValue] = React.useState<string>(String(value));
+  const [localValue, setLocalValue] = React.useState<string>("");
 
   React.useEffect(() => {
-    const parsedLocal = toNumber(localValue);
-    if (parsedLocal !== value) {
-      setLocalValue(String(value));
+    if (isCurrency) {
+      const formatted = value > 0 ? value.toLocaleString("id-ID") : (value === 0 ? "0" : "");
+      if (toNumber(localValue) !== value) {
+        setLocalValue(formatted);
+      }
+    } else {
+      if (toNumber(localValue) !== value) {
+        setLocalValue(String(value));
+      }
     }
-  }, [value]);
+  }, [value, isCurrency]);
+
+  if (isCurrency) {
+    return (
+      <input
+        type="text"
+        value={localValue}
+        onChange={(event) => {
+          const raw = event.target.value;
+          const cleanDigits = raw.replace(/\D/g, "");
+          const numValue = cleanDigits !== "" ? parseInt(cleanDigits, 10) : 0;
+          const formatted = cleanDigits !== "" ? numValue.toLocaleString("id-ID") : "";
+          setLocalValue(formatted);
+          onChange(numValue);
+        }}
+        onBlur={() => {
+          if (localValue === "") {
+            setLocalValue("0");
+            onChange(0);
+          }
+        }}
+        placeholder="0"
+      />
+    );
+  }
 
   return (
     <input
@@ -322,19 +354,19 @@ function ShopeeSingle() {
           {/* Section 1: Dasar Harga & Target */}
           <div className="form-section-title">📊 Informasi Produk & Target</div>
           <Field label="HPP / modal (Rp)">
-            <NumberInput value={input.cost} min={0} onChange={(value) => patch("cost", value)} />
+            <NumberInput value={input.cost} min={0} isCurrency={true} onChange={(value) => patch("cost", value)} />
           </Field>
           <Field label="Target Margin (%)">
             <NumberInput value={input.targetMargin ?? 20} step={1} min={0} onChange={(value) => patch("targetMargin", value)} />
           </Field>
           <Field label="Target harga jual (Rp)">
-            <NumberInput value={input.targetPrice} min={0} onChange={(value) => patch("targetPrice", value)} />
+            <NumberInput value={input.targetPrice} min={0} isCurrency={true} onChange={(value) => patch("targetPrice", value)} />
           </Field>
           <Field label="Diskon penjual (Rp)">
-            <NumberInput value={input.sellerDiscount} min={0} onChange={(value) => patch("sellerDiscount", value)} />
+            <NumberInput value={input.sellerDiscount} min={0} isCurrency={true} onChange={(value) => patch("sellerDiscount", value)} />
           </Field>
           <Field label="Biaya Iklan per Produk (Rp)">
-            <NumberInput value={input.adCost} min={0} onChange={(value) => patch("adCost", value)} />
+            <NumberInput value={input.adCost} min={0} isCurrency={true} onChange={(value) => patch("adCost", value)} />
           </Field>
           <Field label="Promo Iklan (Diskon Gratis Ongkir 1.5%)">
             <select value={input.adDiscountType} onChange={(e) => patch("adDiscountType", e.target.value)}>
@@ -452,7 +484,7 @@ function ShopeeSingle() {
             </div>
           </Field>
           <Field label="Voucher Diskon Platform (Rp)">
-            <NumberInput value={input.platformDiscount} min={0} onChange={(val) => patch("platformDiscount", val)} />
+            <NumberInput value={input.platformDiscount} min={0} isCurrency={true} onChange={(val) => patch("platformDiscount", val)} />
           </Field>
           <Field label="Biaya Pembayaran / Penanganan (%)">
             <NumberInput value={input.paymentRate} step={0.1} min={0} onChange={(val) => patch("paymentRate", val)} />
@@ -498,7 +530,7 @@ function ShopeeSingle() {
           <div className="form-section-title">⚔️ Analisis Pembanding</div>
           <div className="full-width">
             <Field label="Harga Jual Kompetitor (Rp - Opsional)">
-              <NumberInput value={input.competitorPrice ?? 0} step={1000} min={0} onChange={(value) => patch("competitorPrice", value)} />
+              <NumberInput value={input.competitorPrice ?? 0} step={1000} min={0} isCurrency={true} onChange={(value) => patch("competitorPrice", value)} />
             </Field>
           </div>
         </div>
@@ -540,18 +572,16 @@ function ShopeeResults({ result, input }: { result: ReturnType<typeof calculateS
         </div>
       </div>
 
-      {input.adCost > 0 && (
-        <div className="metrics-summary" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
-          <div className="main-metric" style={{ background: '#f0f5f2', color: '#16201b', padding: '12px', borderRadius: '8px', border: '1px solid #d4e2d9', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <span style={{ fontSize: '11px', color: '#68746e' }}>ACOS Iklan (Persentase)</span>
-            <strong style={{ fontSize: '16px', fontWeight: '700', color: '#1d6f52', marginTop: '2px' }}>{result.acos.toFixed(2)}%</strong>
-          </div>
-          <div className="main-metric" style={{ background: '#f0f5f2', color: '#16201b', padding: '12px', borderRadius: '8px', border: '1px solid #d4e2d9', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <span style={{ fontSize: '11px', color: '#68746e' }}>ROAS Iklan (Return on Spend)</span>
-            <strong style={{ fontSize: '16px', fontWeight: '700', color: '#1d6f52', marginTop: '2px' }}>{result.roas.toFixed(2)}x</strong>
-          </div>
+      <div className="metrics-summary" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+        <div className="main-metric" style={{ background: '#f0f5f2', color: '#16201b', padding: '12px', borderRadius: '8px', border: '1px solid #d4e2d9', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <span style={{ fontSize: '11px', color: '#68746e' }}>ACOS Iklan (Persentase)</span>
+          <strong style={{ fontSize: '16px', fontWeight: '700', color: '#1d6f52', marginTop: '2px' }}>{result.acos.toFixed(2)}%</strong>
         </div>
-      )}
+        <div className="main-metric" style={{ background: '#f0f5f2', color: '#16201b', padding: '12px', borderRadius: '8px', border: '1px solid #d4e2d9', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <span style={{ fontSize: '11px', color: '#68746e' }}>ROAS Iklan (Return on Spend)</span>
+          <strong style={{ fontSize: '16px', fontWeight: '700', color: '#1d6f52', marginTop: '2px' }}>{input.adCost > 0 ? `${result.roas.toFixed(2)}x` : "-"}</strong>
+        </div>
+      </div>
 
       <div className="metrics" style={{ marginBottom: '16px' }}>
         <Metric label="Harga Final Customer" value={rupiah.format(result.finalPrice)} />
@@ -889,19 +919,19 @@ function TiktokSingle() {
           {/* Section 1: Dasar Harga & Target */}
           <div className="form-section-title">📊 Informasi Produk & Target</div>
           <Field label="HPP / modal (Rp)">
-            <NumberInput value={input.cost} min={0} onChange={(value) => patch("cost", value)} />
+            <NumberInput value={input.cost} min={0} isCurrency={true} onChange={(value) => patch("cost", value)} />
           </Field>
           <Field label="Target Margin (%)">
             <NumberInput value={input.targetMargin ?? 20} step={1} min={0} onChange={(value) => patch("targetMargin", value)} />
           </Field>
           <Field label="Target harga jual (Rp)">
-            <NumberInput value={input.targetPrice} min={0} onChange={(value) => patch("targetPrice", value)} />
+            <NumberInput value={input.targetPrice} min={0} isCurrency={true} onChange={(value) => patch("targetPrice", value)} />
           </Field>
           <Field label="Diskon penjual (Rp)">
-            <NumberInput value={input.sellerDiscount} min={0} onChange={(value) => patch("sellerDiscount", value)} />
+            <NumberInput value={input.sellerDiscount} min={0} isCurrency={true} onChange={(value) => patch("sellerDiscount", value)} />
           </Field>
           <Field label="Biaya Iklan per Produk (Rp)">
-            <NumberInput value={input.adCost} min={0} onChange={(value) => patch("adCost", value)} />
+            <NumberInput value={input.adCost} min={0} isCurrency={true} onChange={(value) => patch("adCost", value)} />
           </Field>
 
           {/* Section 2: Layanan & Program TikTok */}
@@ -940,7 +970,7 @@ function TiktokSingle() {
             </select>
           </Field>
           <Field label="Biaya Proses (Handling)">
-            <NumberInput value={input.handlingFee} min={0} onChange={(value) => patch("handlingFee", value)} />
+            <NumberInput value={input.handlingFee} min={0} isCurrency={true} onChange={(value) => patch("handlingFee", value)} />
           </Field>
 
           {/* Section 3: Komisi & Pajak */}
@@ -973,7 +1003,7 @@ function TiktokSingle() {
             </div>
           </Field>
           <Field label="Voucher Diskon Platform (Rp)">
-            <NumberInput value={input.platformDiscount} min={0} onChange={(val) => patch("platformDiscount", val)} />
+            <NumberInput value={input.platformDiscount} min={0} isCurrency={true} onChange={(val) => patch("platformDiscount", val)} />
           </Field>
           <Field label="Biaya Pembayaran / Penanganan (%)">
             <NumberInput value={input.paymentRate} step={0.1} min={0} onChange={(val) => patch("paymentRate", val)} />
@@ -1049,7 +1079,7 @@ function TiktokSingle() {
           <div className="form-section-title">⚔️ Analisis Pembanding</div>
           <div className="full-width">
             <Field label="Harga Jual Kompetitor (Rp - Opsional)">
-              <NumberInput value={input.competitorPrice ?? 0} step={1000} min={0} onChange={(value) => patch("competitorPrice", value)} />
+              <NumberInput value={input.competitorPrice ?? 0} step={1000} min={0} isCurrency={true} onChange={(value) => patch("competitorPrice", value)} />
             </Field>
           </div>
         </div>
@@ -1091,18 +1121,16 @@ function TiktokResults({ result, input }: { result: TiktokCalculationResult; inp
         </div>
       </div>
 
-      {input.adCost > 0 && (
-        <div className="metrics-summary" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
-          <div className="main-metric" style={{ background: '#f0f5f2', color: '#16201b', padding: '12px', borderRadius: '8px', border: '1px solid #d4e2d9', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <span style={{ fontSize: '11px', color: '#68746e' }}>ACOS Iklan (Persentase)</span>
-            <strong style={{ fontSize: '16px', fontWeight: '700', color: '#1d6f52', marginTop: '2px' }}>{result.acos.toFixed(2)}%</strong>
-          </div>
-          <div className="main-metric" style={{ background: '#f0f5f2', color: '#16201b', padding: '12px', borderRadius: '8px', border: '1px solid #d4e2d9', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <span style={{ fontSize: '11px', color: '#68746e' }}>ROAS Iklan (Return on Spend)</span>
-            <strong style={{ fontSize: '16px', fontWeight: '700', color: '#1d6f52', marginTop: '2px' }}>{result.roas.toFixed(2)}x</strong>
-          </div>
+      <div className="metrics-summary" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+        <div className="main-metric" style={{ background: '#f0f5f2', color: '#16201b', padding: '12px', borderRadius: '8px', border: '1px solid #d4e2d9', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <span style={{ fontSize: '11px', color: '#68746e' }}>ACOS Iklan (Persentase)</span>
+          <strong style={{ fontSize: '16px', fontWeight: '700', color: '#1d6f52', marginTop: '2px' }}>{result.acos.toFixed(2)}%</strong>
         </div>
-      )}
+        <div className="main-metric" style={{ background: '#f0f5f2', color: '#16201b', padding: '12px', borderRadius: '8px', border: '1px solid #d4e2d9', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <span style={{ fontSize: '11px', color: '#68746e' }}>ROAS Iklan (Return on Spend)</span>
+          <strong style={{ fontSize: '16px', fontWeight: '700', color: '#1d6f52', marginTop: '2px' }}>{input.adCost > 0 ? `${result.roas.toFixed(2)}x` : "-"}</strong>
+        </div>
+      </div>
 
       <div className="metrics" style={{ marginBottom: '16px' }}>
         <Metric label="Harga Final Customer" value={rupiah.format(result.finalPrice)} />
