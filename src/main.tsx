@@ -384,7 +384,7 @@ function ShopeeSingle() {
               <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d6f52', display: 'block', marginBottom: '8px' }}>
                 📦 Dimensi & Berat Paket (Tentukan otomatis Ukuran Biasa vs Khusus)
               </span>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '8px' }}>
+              <div className="dimensions-grid">
                 <Field label="Berat (kg)">
                   <NumberInput value={input.packageWeight} step={0.01} min={0} onChange={(val) => patch("packageWeight", val)} />
                 </Field>
