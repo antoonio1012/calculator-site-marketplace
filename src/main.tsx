@@ -86,12 +86,14 @@ function NumberInput({
   value,
   onChange,
   step = 1000,
+  min,
 }: {
   value: number;
   onChange: (value: number) => void;
   step?: number;
+  min?: number;
 }) {
-  return <input type="number" value={value} step={step} onChange={(event) => onChange(toNumber(event.target.value))} />;
+  return <input type="number" value={value} step={step} min={min} onChange={(event) => onChange(toNumber(event.target.value))} />;
 }
 
 function SearchableSelect({
@@ -258,17 +260,17 @@ function ShopeeSingle() {
         </div>
         <div className="form-grid">
           <Field label="HPP / modal (Rp)">
-            <NumberInput value={input.cost} onChange={(value) => patch("cost", value)} />
+            <NumberInput value={input.cost} min={0} onChange={(value) => patch("cost", value)} />
           </Field>
           <Field label="Target harga jual (Rp)">
-            <NumberInput value={input.targetPrice} onChange={(value) => patch("targetPrice", value)} />
+            <NumberInput value={input.targetPrice} min={0} onChange={(value) => patch("targetPrice", value)} />
           </Field>
           <Field label="Diskon penjual (Rp)">
-            <NumberInput value={input.sellerDiscount} onChange={(value) => patch("sellerDiscount", value)} />
+            <NumberInput value={input.sellerDiscount} min={0} onChange={(value) => patch("sellerDiscount", value)} />
           </Field>
           <Field label="Komisi Affiliate (%)">
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' }}>
-              <NumberInput value={input.affiliateRate} step={0.1} onChange={(value) => patch("affiliateRate", value)} />
+              <NumberInput value={input.affiliateRate} step={0.1} min={0} onChange={(value) => patch("affiliateRate", value)} />
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                 {[0, 2, 5, 10].map((pct) => (
                   <button
@@ -355,10 +357,10 @@ function ShopeeSingle() {
             </select>
           </Field>
           <Field label="Target Margin (%)">
-            <NumberInput value={input.targetMargin ?? 20} step={1} onChange={(value) => patch("targetMargin", value)} />
+            <NumberInput value={input.targetMargin ?? 20} step={1} min={0} onChange={(value) => patch("targetMargin", value)} />
           </Field>
           <Field label="Harga Jual Kompetitor (Rp - Opsional)">
-            <NumberInput value={input.competitorPrice ?? 0} step={1000} onChange={(value) => patch("competitorPrice", value)} />
+            <NumberInput value={input.competitorPrice ?? 0} step={1000} min={0} onChange={(value) => patch("competitorPrice", value)} />
           </Field>
         </div>
         <p className="source">Shopee fee logic dari workbook terbaru per 2026.</p>
