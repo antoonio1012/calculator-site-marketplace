@@ -94,7 +94,7 @@ function NumberInput({
   return <input type="number" value={value} step={step} onChange={(event) => onChange(toNumber(event.target.value))} />;
 }
 
-function SearchSelect({
+function SearchableSelect({
   value,
   onChange,
   options,
@@ -105,15 +105,130 @@ function SearchSelect({
   options: string[];
   placeholder?: string;
 }) {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const [search, setSearch] = React.useState("");
+  const containerRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const filtered = options.filter((opt) =>
+    opt.toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
-    <>
-      <input list={`${placeholder ?? "list"}-options`} value={value} onChange={(event) => onChange(event.target.value)} />
-      <datalist id={`${placeholder ?? "list"}-options`}>
-        {options.map((option) => (
-          <option value={option} key={option} />
-        ))}
-      </datalist>
-    </>
+    <div ref={containerRef} className="searchable-select" style={{ position: "relative", width: "100%" }}>
+      <div
+        className="select-trigger"
+        onClick={() => {
+          setIsOpen(!isOpen);
+          setSearch("");
+        }}
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          border: "1px solid #cfd8d1",
+          borderRadius: "7px",
+          padding: "8px 10px",
+          background: "white",
+          cursor: "pointer",
+          minHeight: "40px",
+          fontSize: "14px",
+          boxSizing: "border-box"
+        }}
+      >
+        <span style={{ color: value ? "#15231c" : "#68746e", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>
+          {value || placeholder || "Pilih..."}
+        </span>
+        <span style={{ fontSize: "10px", color: "#68746e", marginLeft: "8px" }}>▼</span>
+      </div>
+
+      {isOpen && (
+        <div
+          className="select-dropdown"
+          style={{
+            position: "absolute",
+            top: "100%",
+            left: 0,
+            right: 0,
+            background: "white",
+            border: "1px solid #cfd8d1",
+            borderRadius: "7px",
+            marginTop: "4px",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+            zIndex: 1000,
+            maxHeight: "250px",
+            display: "flex",
+            flexDirection: "column"
+          }}
+        >
+          <input
+            type="text"
+            placeholder="Cari kategori..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            autoFocus
+            style={{
+              border: "none",
+              borderBottom: "1px solid #e2e7e0",
+              borderRadius: "7px 7px 0 0",
+              outline: "none",
+              padding: "10px",
+              minHeight: "36px",
+              width: "100%",
+              boxSizing: "border-box"
+            }}
+          />
+          <div
+            className="options-list"
+            style={{
+              overflowY: "auto",
+              maxHeight: "200px"
+            }}
+          >
+            {filtered.length > 0 ? (
+              filtered.map((opt) => (
+                <div
+                  key={opt}
+                  className="option-item"
+                  onClick={() => {
+                    onChange(opt);
+                    setIsOpen(false);
+                  }}
+                  style={{
+                    padding: "10px",
+                    cursor: "pointer",
+                    background: opt === value ? "#eef2ec" : "transparent",
+                    color: "#15231c",
+                    fontSize: "13px",
+                    borderBottom: "1px solid #f0f3ef",
+                    textAlign: "left"
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "#f5f7f4")}
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.background = opt === value ? "#eef2ec" : "transparent")
+                  }
+                >
+                  {opt}
+                </div>
+              ))
+            ) : (
+              <div style={{ padding: "10px", color: "#68746e", fontSize: "13px", textAlign: "left" }}>
+                Tidak ditemukan
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -152,16 +267,38 @@ function ShopeeSingle() {
             <NumberInput value={input.sellerDiscount} onChange={(value) => patch("sellerDiscount", value)} />
           </Field>
           <Field label="Komisi Affiliate (%)">
-            <NumberInput value={input.affiliateRate} step={0.1} onChange={(value) => patch("affiliateRate", value)} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' }}>
+              <NumberInput value={input.affiliateRate} step={0.1} onChange={(value) => patch("affiliateRate", value)} />
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                {[0, 2, 5, 10].map((pct) => (
+                  <button
+                    type="button"
+                    key={pct}
+                    onClick={() => patch("affiliateRate", pct)}
+                    style={{
+                      padding: '4px 8px',
+                      fontSize: '11px',
+                      borderRadius: '5px',
+                      border: '1px solid #cbd4ca',
+                      background: input.affiliateRate === pct ? '#1d6f52' : '#fff',
+                      color: input.affiliateRate === pct ? '#fff' : '#1b2a22',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    {pct}%
+                  </button>
+                ))}
+              </div>
+            </div>
           </Field>
           <Field label="Kategori admin">
-            <select value={input.adminCategory} onChange={(event) => patch("adminCategory", event.target.value)}>
-              {shopeeAdminCategories.map((item) => (
-                <option value={item.name} key={item.name}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
+            <SearchableSelect
+              value={input.adminCategory}
+              onChange={(value) => patch("adminCategory", value)}
+              options={shopeeAdminCategories.map((item) => item.name)}
+              placeholder="Cari kategori admin..."
+            />
           </Field>
           <Field label="Gratis Ongkir Xtra">
             <select value={input.freeShipping} onChange={(event) => patch("freeShipping", event.target.value)}>
