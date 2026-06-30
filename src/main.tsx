@@ -443,90 +443,93 @@ function ShopeeResults({ result, input }: { result: ReturnType<typeof calculateS
       </div>
 
       <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: '#16201b' }}>Rincian Biaya & Potongan</h3>
-      <table style={{ fontSize: '13px', width: '100%' }}>
+      <table>
         <tbody>
           <tr>
             <td>Harga Final Produk (Dibayar Customer)</td>
             <td>-</td>
-            <td style={{ textAlign: 'right', fontWeight: '600' }}>{rupiah.format(result.finalPrice)}</td>
+            <td>{rupiah.format(result.finalPrice)}</td>
           </tr>
-          <tr>
+          <tr className="deduction">
             <td>Biaya Admin Kategori</td>
-            <td>{formatPercent(result.adminRate)}</td>
-            <td style={{ textAlign: 'right', color: '#b71c1c' }}>-{rupiah.format(result.adminFee)}</td>
+            <td><span className="rate-badge">{formatPercent(result.adminRate)}</span></td>
+            <td>-{rupiah.format(result.adminFee)}</td>
           </tr>
-          <tr>
+          <tr className="deduction">
             <td>Gratis Ongkir Xtra</td>
-            <td>{formatPercent(result.freeShippingRate)}</td>
-            <td style={{ textAlign: 'right', color: '#b71c1c' }}>-{rupiah.format(result.freeShippingFee)}</td>
+            <td><span className="rate-badge">{formatPercent(result.freeShippingRate)}</span></td>
+            <td>-{rupiah.format(result.freeShippingFee)}</td>
           </tr>
-          <tr>
+          <tr className="deduction">
             <td>Promo Xtra</td>
-            <td>{formatPercent(result.promoRate)}</td>
-            <td style={{ textAlign: 'right', color: '#b71c1c' }}>-{rupiah.format(result.promoFee)}</td>
+            <td><span className="rate-badge">{formatPercent(result.promoRate)}</span></td>
+            <td>-{rupiah.format(result.promoFee)}</td>
           </tr>
-          <tr>
+          <tr className="deduction">
             <td>Biaya Proses Pesanan</td>
-            <td>Fix</td>
-            <td style={{ textAlign: 'right', color: '#b71c1c' }}>-{rupiah.format(result.processingFee)}</td>
+            <td><span className="rate-badge">Fix</span></td>
+            <td>-{rupiah.format(result.processingFee)}</td>
           </tr>
-          <tr>
+          <tr className="deduction">
             <td>Pre-order</td>
-            <td>{formatPercent(result.preOrderRate)}</td>
-            <td style={{ textAlign: 'right', color: '#b71c1c' }}>-{rupiah.format(result.preOrderFee)}</td>
+            <td><span className="rate-badge">{formatPercent(result.preOrderRate)}</span></td>
+            <td>-{rupiah.format(result.preOrderFee)}</td>
           </tr>
           {input.useHemat && (
-            <tr>
+            <tr className="deduction">
               <td>Program Hemat Biaya Kirim</td>
-              <td>Fix</td>
-              <td style={{ textAlign: 'right', color: '#b71c1c' }}>-{rupiah.format(result.hematFee)}</td>
+              <td><span className="rate-badge">Fix</span></td>
+              <td>-{rupiah.format(result.hematFee)}</td>
             </tr>
           )}
           {input.useInsurance && (
-            <tr>
+            <tr className="deduction">
               <td>Asuransi Pengiriman</td>
-              <td>0.50%</td>
-              <td style={{ textAlign: 'right', color: '#b71c1c' }}>-{rupiah.format(result.insuranceFee)}</td>
+              <td><span className="rate-badge">0.50%</span></td>
+              <td>-{rupiah.format(result.insuranceFee)}</td>
             </tr>
           )}
-          <tr style={{ fontWeight: '600', borderTop: '2px solid #e0e6de', borderBottom: '2px solid #e0e6de' }}>
+          <tr className="subtotal-row">
             <td>Dana Diterima Toko (Marketplace)</td>
             <td>-</td>
-            <td style={{ textAlign: 'right' }}>{rupiah.format(result.sellerReceives)}</td>
+            <td>{rupiah.format(result.sellerReceives)}</td>
           </tr>
-          <tr>
+          <tr className="deduction">
             <td>Komisi Affiliate</td>
-            <td>{input.affiliateRate}%</td>
-            <td style={{ textAlign: 'right', color: '#b71c1c' }}>-{rupiah.format(result.affiliateFee)}</td>
+            <td><span className="rate-badge">{input.affiliateRate}%</span></td>
+            <td>-{rupiah.format(result.affiliateFee)}</td>
           </tr>
-          <tr>
+          <tr className="deduction">
             <td>Pajak PPh (Star Seller)</td>
-            <td>0.50%</td>
-            <td style={{ textAlign: 'right', color: '#b71c1c' }}>-{rupiah.format(result.tax)}</td>
+            <td><span className="rate-badge">0.50%</span></td>
+            <td>-{rupiah.format(result.tax)}</td>
           </tr>
           {result.ppnFee > 0 && (
-            <tr>
-              <td>Pajak PPN ({input.ppnRate * 100}%) <span style={{ fontSize: '10px', color: '#68746e' }}>({input.ppnBasis === "finalPrice" ? "dari Harga Final" : "dari Dana Diterima"})</span></td>
-              <td>{input.ppnRate * 100}%</td>
-              <td style={{ textAlign: 'right', color: '#b71c1c' }}>-{rupiah.format(result.ppnFee)}</td>
+            <tr className="deduction">
+              <td>
+                Pajak PPN ({input.ppnRate * 100}%) 
+                <div style={{ fontSize: '10px', color: '#68746e', marginTop: '2px' }}>
+                  ({input.ppnBasis === "finalPrice" ? "dari Harga Final" : "dari Dana Diterima"})
+                </div>
+              </td>
+              <td><span className="rate-badge">{input.ppnRate * 100}%</span></td>
+              <td>-{rupiah.format(result.ppnFee)}</td>
             </tr>
           )}
-          <tr style={{ fontWeight: '700', background: '#f5f7f4', borderTop: '2px solid #1d6f52', borderBottom: '2px solid #1d6f52' }}>
+          <tr className="net-row">
             <td>Dana Diterima Bersih (Net)</td>
             <td>-</td>
-            <td style={{ textAlign: 'right', color: '#16704e' }}>{rupiah.format(result.sellerReceivesAfterTaxAndAffiliate)}</td>
+            <td>{rupiah.format(result.sellerReceivesAfterTaxAndAffiliate)}</td>
           </tr>
-          <tr>
+          <tr className="deduction">
             <td>HPP / Modal</td>
             <td>-</td>
-            <td style={{ textAlign: 'right', color: '#68746e' }}>-{rupiah.format(input.cost)}</td>
+            <td>-{rupiah.format(input.cost)}</td>
           </tr>
-          <tr style={{ fontWeight: '700', fontSize: '14px', borderTop: '1px solid #e0e6de' }}>
+          <tr className={`profit-row ${result.profit >= 0 ? 'addition' : 'deduction'}`}>
             <td>Profit Bersih Akhir</td>
             <td>-</td>
-            <td style={{ textAlign: 'right', color: result.profit >= 0 ? '#16704e' : '#bf3d3d' }}>
-              {rupiah.format(result.profit)}
-            </td>
+            <td>{rupiah.format(result.profit)}</td>
           </tr>
         </tbody>
       </table>
