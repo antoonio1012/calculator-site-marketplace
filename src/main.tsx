@@ -289,8 +289,13 @@ function ShopeeSingle() {
           <h2>Shopee Single Calculator</h2>
         </div>
         <div className="form-grid">
+          {/* Section 1: Dasar Harga & Target */}
+          <div className="form-section-title">📊 Informasi Produk & Target</div>
           <Field label="HPP / modal (Rp)">
             <NumberInput value={input.cost} min={0} onChange={(value) => patch("cost", value)} />
+          </Field>
+          <Field label="Target Margin (%)">
+            <NumberInput value={input.targetMargin ?? 20} step={1} min={0} onChange={(value) => patch("targetMargin", value)} />
           </Field>
           <Field label="Target harga jual (Rp)">
             <NumberInput value={input.targetPrice} min={0} onChange={(value) => patch("targetPrice", value)} />
@@ -298,32 +303,9 @@ function ShopeeSingle() {
           <Field label="Diskon penjual (Rp)">
             <NumberInput value={input.sellerDiscount} min={0} onChange={(value) => patch("sellerDiscount", value)} />
           </Field>
-          <Field label="Komisi Affiliate (%)">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' }}>
-              <NumberInput value={input.affiliateRate} step={0.1} min={0} onChange={(value) => patch("affiliateRate", value)} />
-              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                {[0, 2, 5, 10].map((pct) => (
-                  <button
-                    type="button"
-                    key={pct}
-                    onClick={() => patch("affiliateRate", pct)}
-                    style={{
-                      padding: '4px 8px',
-                      fontSize: '11px',
-                      borderRadius: '5px',
-                      border: '1px solid #cbd4ca',
-                      background: input.affiliateRate === pct ? '#1d6f52' : '#fff',
-                      color: input.affiliateRate === pct ? '#fff' : '#1b2a22',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    {pct}%
-                  </button>
-                ))}
-              </div>
-            </div>
-          </Field>
+
+          {/* Section 2: Layanan & Program Shopee */}
+          <div className="form-section-title">🛍️ Layanan & Program Shopee</div>
           <Field label="Kategori admin">
             <SearchableSelect
               value={input.adminCategory}
@@ -359,6 +341,26 @@ function ShopeeSingle() {
               ))}
             </select>
           </Field>
+
+          {/* Section 3: Komisi & Pajak */}
+          <div className="form-section-title">💸 Komisi & Pajak Tambahan</div>
+          <Field label="Komisi Affiliate (%)">
+            <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+              <NumberInput value={input.affiliateRate} step={0.1} min={0} onChange={(value) => patch("affiliateRate", value)} />
+              <div className="quick-btn-container">
+                {[0, 2, 5, 10].map((pct) => (
+                  <button
+                    type="button"
+                    key={pct}
+                    onClick={() => patch("affiliateRate", pct)}
+                    className={`quick-btn ${input.affiliateRate === pct ? 'active' : ''}`}
+                  >
+                    {pct}%
+                  </button>
+                ))}
+              </div>
+            </div>
+          </Field>
           <Field label="Pajak PPN">
             <select value={input.ppnRate} onChange={(event) => patch("ppnRate", toNumber(event.target.value))}>
               <option value={0}>Tidak Ada PPN (0%)</option>
@@ -367,12 +369,14 @@ function ShopeeSingle() {
             </select>
           </Field>
           {input.ppnRate > 0 && (
-            <Field label="Basis Perhitungan PPN">
-              <select value={input.ppnBasis} onChange={(event) => patch("ppnBasis", event.target.value)}>
-                <option value="finalPrice">Harga Final (Dibayar Customer)</option>
-                <option value="sellerReceives">Dana Diterima (Setelah Potong Fee)</option>
-              </select>
-            </Field>
+            <div className="full-width">
+              <Field label="Basis Perhitungan PPN">
+                <select value={input.ppnBasis} onChange={(event) => patch("ppnBasis", event.target.value)}>
+                  <option value="finalPrice">Harga Final (Dibayar Customer)</option>
+                  <option value="sellerReceives">Dana Diterima (Setelah Potong Fee)</option>
+                </select>
+              </Field>
+            </div>
           )}
           <Field label="Program Hemat Biaya Kirim">
             <select value={input.useHemat ? "yes" : "no"} onChange={(event) => patch("useHemat", event.target.value === "yes")}>
@@ -386,12 +390,14 @@ function ShopeeSingle() {
               <option value="yes">Ditanggung Penjual (0.5% dari harga final)</option>
             </select>
           </Field>
-          <Field label="Target Margin (%)">
-            <NumberInput value={input.targetMargin ?? 20} step={1} min={0} onChange={(value) => patch("targetMargin", value)} />
-          </Field>
-          <Field label="Harga Jual Kompetitor (Rp - Opsional)">
-            <NumberInput value={input.competitorPrice ?? 0} step={1000} min={0} onChange={(value) => patch("competitorPrice", value)} />
-          </Field>
+
+          {/* Section 4: Analisis Pembanding */}
+          <div className="form-section-title">⚔️ Analisis Pembanding</div>
+          <div className="full-width">
+            <Field label="Harga Jual Kompetitor (Rp - Opsional)">
+              <NumberInput value={input.competitorPrice ?? 0} step={1000} min={0} onChange={(value) => patch("competitorPrice", value)} />
+            </Field>
+          </div>
         </div>
         <p className="source">Shopee fee logic dari workbook terbaru per 2026.</p>
       </section>

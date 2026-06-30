@@ -51,3 +51,69 @@ td input, td select { min-width: 150px; }
   .mode-switch, .tabs { width: 100%; }
   .mode-switch button, .tabs button { flex: 1; justify-content: center; }
 }
+
+/* Premium Form Grouping & Layout Styles */
+.form-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1d6f52;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 14px;
+  margin-bottom: 4px;
+  padding-bottom: 4px;
+  border-bottom: 1.5px solid #eef2ec;
+  grid-column: span 2;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.form-grid > .form-section-title:first-child {
+  margin-top: 0;
+}
+.full-width {
+  grid-column: span 2;
+}
+.quick-btn-container {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+.quick-btn {
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 6px;
+  border: 1px solid #cbd4ca;
+  background: white;
+  color: #1b2a22;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.quick-btn:hover {
+  border-color: #1d6f52;
+  background: #f0f7f4;
+  color: #1d6f52;
+}
+.quick-btn.active {
+  background: #1d6f52;
+  color: white;
+  border-color: #1d6f52;
+  box-shadow: 0 2px 6px rgba(29, 111, 82, 0.15);
+}
+.searchable-select .select-trigger {
+  transition: all 0.2s ease;
+}
+.searchable-select .select-trigger:hover {
+  border-color: #1d6f52;
+  box-shadow: 0 0 0 3px rgba(29, 111, 82, 0.08);
+}
+.searchable-select input:focus {
+  border-color: #1d6f52;
+  box-shadow: 0 0 0 3px rgba(29, 111, 82, 0.08);
+}
+.option-item {
+  transition: all 0.15s ease;
+}
+
