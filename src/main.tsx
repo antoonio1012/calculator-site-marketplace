@@ -22,6 +22,12 @@ import {
   mapShippingType,
   summarizeTiktokOrders,
   type TiktokOrder,
+  calculateTiktok,
+  defaultTiktokInput,
+  tiktokAdminCategories,
+  tiktokBebasOngkirOptions,
+  type TiktokInput,
+  type TiktokCalculationResult,
 } from "./lib/tiktok";
 
 type Mode = "shopee" | "tiktok";
@@ -725,34 +731,337 @@ function ShopeeMode() {
 }
 
 function TiktokSingle() {
-  const [origin, setOrigin] = React.useState("Jawa");
-  const [destination, setDestination] = React.useState("DKI Jakarta");
-  const [shippingType, setShippingType] = React.useState("Standard");
-  const [weight, setWeight] = React.useState(1);
-  const fee = estimateTiktokShipping(origin, destination, shippingType, weight);
+  const [input, setInput] = React.useState<TiktokInput>(defaultTiktokInput);
+  const result = calculateTiktok(input);
+
+  function patch(key: keyof TiktokInput, value: string | number | boolean) {
+    setInput((current) => ({ ...current, [key]: value }));
+  }
 
   return (
     <div className="workspace two-col">
       <section className="panel">
         <div className="section-title">
           <Calculator size={18} />
-          <h2>TikTok Ongkir Single</h2>
+          <h2>TikTok Single Calculator</h2>
         </div>
         <div className="form-grid">
-          <Field label="Asal pengiriman"><select value={origin} onChange={(event) => setOrigin(event.target.value)}>{tiktokZones.map((zone) => <option key={zone}>{zone}</option>)}</select></Field>
-          <Field label="Tujuan"><select value={destination} onChange={(event) => setDestination(event.target.value)}>{tiktokZones.map((zone) => <option key={zone}>{zone}</option>)}</select></Field>
-          <Field label="Tipe pengiriman"><select value={shippingType} onChange={(event) => setShippingType(event.target.value)}>{tiktokShippingTypes.map((type) => <option key={type}>{type}</option>)}</select></Field>
-          <Field label="Berat kg"><NumberInput value={weight} step={0.01} onChange={setWeight} /></Field>
+          {/* Section 1: Dasar Harga & Target */}
+          <div className="form-section-title">📊 Informasi Produk & Target</div>
+          <Field label="HPP / modal (Rp)">
+            <NumberInput value={input.cost} min={0} onChange={(value) => patch("cost", value)} />
+          </Field>
+          <Field label="Target Margin (%)">
+            <NumberInput value={input.targetMargin ?? 20} step={1} min={0} onChange={(value) => patch("targetMargin", value)} />
+          </Field>
+          <Field label="Target harga jual (Rp)">
+            <NumberInput value={input.targetPrice} min={0} onChange={(value) => patch("targetPrice", value)} />
+          </Field>
+          <Field label="Diskon penjual (Rp)">
+            <NumberInput value={input.sellerDiscount} min={0} onChange={(value) => patch("sellerDiscount", value)} />
+          </Field>
+
+          {/* Section 2: Layanan & Program TikTok */}
+          <div className="form-section-title">🛍️ Layanan & Program TikTok</div>
+          <Field label="Kategori Admin">
+            <select
+              value={input.adminRate}
+              onChange={(event) => patch("adminRate", toNumber(event.target.value))}
+            >
+              {tiktokAdminCategories.map((item) => (
+                <option value={item.rate} key={item.name}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Bebas Ongkir (Komisi Dinamis)">
+            <select
+              value={input.bebasOngkirRate}
+              onChange={(event) => patch("bebasOngkirRate", toNumber(event.target.value))}
+            >
+              {tiktokBebasOngkirOptions.map((item) => (
+                <option value={item.rate} key={item.name}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Pre-order (PO 3%)">
+            <select
+              value={input.preOrderRate === 0 ? "no" : "yes"}
+              onChange={(event) => patch("preOrderRate", event.target.value === "yes" ? 0.03 : 0)}
+            >
+              <option value="no">Tidak Ada / Normal</option>
+              <option value="yes">Pre-order (+3% Komisi)</option>
+            </select>
+          </Field>
+          <Field label="Biaya Proses (Handling)">
+            <NumberInput value={input.handlingFee} min={0} onChange={(value) => patch("handlingFee", value)} />
+          </Field>
+
+          {/* Section 3: Komisi & Pajak */}
+          <div className="form-section-title">💸 Komisi & Pajak Tambahan</div>
+          <Field label="Komisi Affiliate (%)">
+            <div style={{ display: 'flex', gap: '6px', alignItems: 'center', width: '100%', height: '40px' }}>
+              <div style={{ flex: '1', minWidth: '50px' }}>
+                <NumberInput value={input.affiliateRate} step={0.1} min={0} onChange={(value) => patch("affiliateRate", value)} />
+              </div>
+              <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
+                {[0, 2, 5, 10].map((pct) => (
+                  <button
+                    type="button"
+                    key={pct}
+                    onClick={() => patch("affiliateRate", pct)}
+                    className={`quick-btn ${input.affiliateRate === pct ? 'active' : ''}`}
+                    style={{
+                      padding: '0 6px',
+                      height: '34px',
+                      lineHeight: '34px',
+                      fontSize: '11px',
+                      minWidth: '32px',
+                      textAlign: 'center'
+                    }}
+                  >
+                    {pct}%
+                  </button>
+                ))}
+              </div>
+            </div>
+          </Field>
+          <Field label="Pajak PPN">
+            <select value={input.ppnRate} onChange={(event) => patch("ppnRate", toNumber(event.target.value))}>
+              <option value={0}>Tidak Ada PPN (0%)</option>
+              <option value={0.11}>PPN 11%</option>
+              <option value={0.12}>PPN 12%</option>
+            </select>
+          </Field>
+          {input.ppnRate > 0 && (
+            <div className="full-width">
+              <Field label="Basis Perhitungan PPN">
+                <select value={input.ppnBasis} onChange={(event) => patch("ppnBasis", event.target.value)}>
+                  <option value="finalPrice">Harga Final (Dibayar Customer)</option>
+                  <option value="sellerReceives">Dana Diterima (Setelah Potong Fee)</option>
+                </select>
+              </Field>
+            </div>
+          )}
+          <Field label="Asuransi Pengiriman">
+            <select value={input.useInsurance ? "yes" : "no"} onChange={(event) => patch("useInsurance", event.target.value === "yes")}>
+              <option value="no">Tidak Ada / Pembeli</option>
+              <option value="yes">Ditanggung Penjual (0.5% dari harga final)</option>
+            </select>
+          </Field>
+
+          {/* Section 4: Ongkir & Pengiriman */}
+          <div className="form-section-title">🚚 Ongkir & Beban Pengiriman</div>
+          <div className="full-width">
+            <Field label="Bebankan Ongkos Kirim ke Penjual?">
+              <select
+                value={input.chargeShippingToSeller ? "yes" : "no"}
+                onChange={(event) => patch("chargeShippingToSeller", event.target.value === "yes")}
+              >
+                <option value="no">Tidak (Ditanggung Pembeli/TikTok)</option>
+                <option value="yes">Ya (Mengurangi Profit Bersih Anda)</option>
+              </select>
+            </Field>
+          </div>
+          {input.chargeShippingToSeller && (
+            <>
+              <Field label="Asal pengiriman">
+                <select value={input.origin} onChange={(event) => patch("origin", event.target.value)}>
+                  {tiktokZones.map((zone) => <option key={zone}>{zone}</option>)}
+                </select>
+              </Field>
+              <Field label="Tujuan">
+                <select value={input.destination} onChange={(event) => patch("destination", event.target.value)}>
+                  {tiktokZones.map((zone) => <option key={zone}>{zone}</option>)}
+                </select>
+              </Field>
+              <Field label="Tipe pengiriman">
+                <select value={input.shippingType} onChange={(event) => patch("shippingType", event.target.value)}>
+                  {tiktokShippingTypes.map((type) => <option key={type}>{type}</option>)}
+                </select>
+              </Field>
+              <Field label="Berat kg">
+                <NumberInput value={input.weight} step={0.01} min={0} onChange={(value) => patch("weight", value)} />
+              </Field>
+            </>
+          )}
+
+          {/* Section 5: Analisis Pembanding */}
+          <div className="form-section-title">⚔️ Analisis Pembanding</div>
+          <div className="full-width">
+            <Field label="Harga Jual Kompetitor (Rp - Opsional)">
+              <NumberInput value={input.competitorPrice ?? 0} step={1000} min={0} onChange={(value) => patch("competitorPrice", value)} />
+            </Field>
+          </div>
         </div>
-        <p className="source">TikTok ongkir per 1 Mei 2026.</p>
+        <p className="source">TikTok Shop fee & ongkir per 2026.</p>
       </section>
-      <section className="panel results">
-        <div className="metrics">
-          <Metric label="Estimasi ongkir" value={rupiah.format(fee)} />
-          <Metric label="Bucket berat" value={getWeightBucketLabel(weight)} />
-        </div>
-      </section>
+      <TiktokResults result={result} input={input} />
     </div>
+  );
+}
+
+function TiktokResults({ result, input }: { result: TiktokCalculationResult; input: TiktokInput }) {
+  const recResult = calculateTiktok({ ...input, targetPrice: result.recommendedPrice }, true);
+  
+  const competitorPrice = input.competitorPrice;
+  let compResult = null;
+  if (competitorPrice && competitorPrice > 0) {
+    compResult = calculateTiktok({ ...input, targetPrice: competitorPrice }, true);
+  }
+
+  return (
+    <section className="panel results">
+      <div className="section-title">
+        <BarChart3 size={18} />
+        <h2>Hasil Analisis & Perhitungan</h2>
+      </div>
+
+      <div className="metrics-summary" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+        <div className="main-metric" style={{ background: 'linear-gradient(135deg, #1d6f52 0%, #114c37 100%)', color: 'white', padding: '16px', borderRadius: '10px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '110px', boxShadow: '0 4px 15px rgba(29, 111, 82, 0.2)' }}>
+          <span style={{ fontSize: '13px', opacity: 0.85 }}>Dana Diterima Net</span>
+          <strong style={{ fontSize: '24px', fontWeight: '700', marginTop: '6px' }}>{rupiah.format(result.sellerReceivesAfterTaxAndAffiliate)}</strong>
+          <span style={{ fontSize: '11px', opacity: 0.75, marginTop: '4px' }}>Sudah dikurangi PPh, PPN & Affiliate</span>
+        </div>
+        <div className="main-metric" style={{ background: result.profit >= 0 ? 'linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%)' : 'linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%)', color: result.profit >= 0 ? '#1b5e20' : '#b71c1c', padding: '16px', borderRadius: '10px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '110px' }}>
+          <span style={{ fontSize: '13px', opacity: 0.85 }}>Profit Bersih (Margin)</span>
+          <strong style={{ fontSize: '24px', fontWeight: '700', marginTop: '6px' }}>
+            {rupiah.format(result.profit)} ({formatPercent(result.margin)})
+          </strong>
+          <span style={{ fontSize: '11px', opacity: 0.75, marginTop: '4px' }}>Target Margin: {input.targetMargin}%</span>
+        </div>
+      </div>
+
+      <div className="metrics" style={{ marginBottom: '16px' }}>
+        <Metric label="Harga Final Customer" value={rupiah.format(result.finalPrice)} />
+        <Metric label="Rekomendasi Harga Jual" value={rupiah.format(result.recommendedPrice)} />
+      </div>
+
+      <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: '#16201b' }}>Rincian Biaya & Potongan</h3>
+      <table>
+        <tbody>
+          <tr>
+            <td>Harga Final Produk (Dibayar Customer)</td>
+            <td>-</td>
+            <td>{rupiah.format(result.finalPrice)}</td>
+          </tr>
+          <tr className="deduction">
+            <td>Biaya Komisi Platform</td>
+            <td><span className="rate-badge">{formatPercent(input.adminRate)}</span></td>
+            <td>-{rupiah.format(result.adminFee)}</td>
+          </tr>
+          {result.bebasOngkirFee > 0 && (
+            <tr className="deduction">
+              <td>Biaya Bebas Ongkir (Komisi Dinamis)</td>
+              <td><span className="rate-badge">{formatPercent(input.bebasOngkirRate)}</span></td>
+              <td>-{rupiah.format(result.bebasOngkirFee)}</td>
+            </tr>
+          )}
+          <tr className="deduction">
+            <td>Biaya Pemrosesan (Handling Fee)</td>
+            <td><span className="rate-badge">Fix</span></td>
+            <td>-{rupiah.format(result.handlingFee)}</td>
+          </tr>
+          {result.preOrderFee > 0 && (
+            <tr className="deduction">
+              <td>Biaya Pre-order (PO)</td>
+              <td><span className="rate-badge">3.00%</span></td>
+              <td>-{rupiah.format(result.preOrderFee)}</td>
+            </tr>
+          )}
+          {result.insuranceFee > 0 && (
+            <tr className="deduction">
+              <td>Asuransi Pengiriman</td>
+              <td><span className="rate-badge">0.50%</span></td>
+              <td>-{rupiah.format(result.insuranceFee)}</td>
+            </tr>
+          )}
+          {input.chargeShippingToSeller && result.shippingFee > 0 && (
+            <tr className="deduction">
+              <td>
+                Beban Ongkir Seller
+                <div style={{ fontSize: '10px', color: '#68746e', marginTop: '2px' }}>
+                  ({input.origin} ke {input.destination}, {input.shippingType}, {input.weight}kg)
+                </div>
+              </td>
+              <td><span className="rate-badge">{getWeightBucketLabel(input.weight)}</span></td>
+              <td>-{rupiah.format(result.shippingFee)}</td>
+            </tr>
+          )}
+          <tr className="subtotal-row">
+            <td>Dana Diterima Toko (Marketplace)</td>
+            <td>-</td>
+            <td>{rupiah.format(result.sellerReceives)}</td>
+          </tr>
+          <tr className="deduction">
+            <td>Komisi Affiliate</td>
+            <td><span className="rate-badge">{input.affiliateRate}%</span></td>
+            <td>-{rupiah.format(result.affiliateFee)}</td>
+          </tr>
+          <tr className="deduction">
+            <td>Pajak PPh (Star/Super Seller)</td>
+            <td><span className="rate-badge">0.50%</span></td>
+            <td>-{rupiah.format(result.tax)}</td>
+          </tr>
+          {result.ppnFee > 0 && (
+            <tr className="deduction">
+              <td>
+                Pajak PPN ({input.ppnRate * 100}%) 
+                <div style={{ fontSize: '10px', color: '#68746e', marginTop: '2px' }}>
+                  ({input.ppnBasis === "finalPrice" ? "dari Harga Final" : "dari Dana Diterima"})
+                </div>
+              </td>
+              <td><span className="rate-badge">{input.ppnRate * 100}%</span></td>
+              <td>-{rupiah.format(result.ppnFee)}</td>
+            </tr>
+          )}
+          <tr className="net-row">
+            <td>Dana Diterima Bersih (Net)</td>
+            <td>-</td>
+            <td>{rupiah.format(result.sellerReceivesAfterTaxAndAffiliate)}</td>
+          </tr>
+          <tr className="deduction">
+            <td>HPP / Modal</td>
+            <td>-</td>
+            <td>-{rupiah.format(input.cost)}</td>
+          </tr>
+          <tr className={`profit-row ${result.profit >= 0 ? 'addition' : 'deduction'}`}>
+            <td>Profit Bersih Akhir</td>
+            <td>-</td>
+            <td>{rupiah.format(result.profit)}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div className="explanation-card" style={{ marginTop: '16px', padding: '12px', border: '1px dashed #1d6f52', borderRadius: '8px', background: '#f0f7f4', fontSize: '12px', color: '#27523f', lineHeight: '1.4' }}>
+        <h4 style={{ margin: '0 0 6px 0', fontSize: '13px', fontWeight: '700', color: '#114c37' }}>
+          💡 Penjelasan Perhitungan TikTok Shop
+        </h4>
+        <p style={{ marginBottom: '6px' }}>
+          <strong>Harga Jual ({rupiah.format(result.finalPrice)})</strong> menghasilkan profit bersih nyata sebesar <strong>{rupiah.format(result.profit)}</strong> (Margin <strong>{formatPercent(result.margin)}</strong>).
+        </p>
+        <p>
+          <strong>Rekomendasi Harga ({rupiah.format(result.recommendedPrice)})</strong> disarankan agar Anda memperoleh profit bersih yang sesuai dengan target margin awal Anda ({input.targetMargin}%), yaitu menghasilkan dana bersih <strong>{rupiah.format(recResult.sellerReceivesAfterTaxAndAffiliate)}</strong> dan profit bersih <strong>{rupiah.format(recResult.profit)}</strong> (Margin <strong>{formatPercent(recResult.margin)}</strong>).
+        </p>
+      </div>
+
+      {compResult && competitorPrice !== undefined && (
+        <div className="competitor-card" style={{ marginTop: '12px', padding: '12px', border: '1px solid #cbd4ca', borderRadius: '8px', background: '#fafbfc', fontSize: '12px', color: '#333', lineHeight: '1.4' }}>
+          <h4 style={{ margin: '0 0 6px 0', fontSize: '13px', fontWeight: '700', color: '#2a3a2a' }}>
+            ⚔️ Analisis Kompetitor ({rupiah.format(competitorPrice)})
+          </h4>
+          <p style={{ marginBottom: '4px' }}>
+            Jika Anda mengikuti harga kompetitor, dana bersih diterima Anda adalah <strong>{rupiah.format(compResult.sellerReceivesAfterTaxAndAffiliate)}</strong>.
+          </p>
+          <p>
+            Profit bersih Anda akan menjadi <strong>{rupiah.format(compResult.profit)}</strong> (Margin <strong>{formatPercent(compResult.margin)}</strong>) dibanding HPP modal Anda.
+          </p>
+        </div>
+      )}
+    </section>
   );
 }
 

@@ -96,3 +96,157 @@ export function groupTiktokRows(rows: TiktokCalculatedOrder[], key: "destination
   }
   return Array.from(groups.values()).sort((a, b) => b.shipping - a.shipping);
 }
+
+// TikTok Shop Admin & Marketplace Calculator
+export type TiktokInput = {
+  cost: number;
+  targetPrice: number;
+  sellerDiscount: number;
+  adminRate: number; // e.g. 0.0825
+  bebasOngkirRate: number; // e.g. 0.04
+  handlingFee: number; // e.g. 1250
+  preOrderRate: number; // e.g. 0.03
+  affiliateRate: number; // percentage (e.g. 2 for 2%)
+  ppnRate: number; // e.g. 0.11
+  ppnBasis: "finalPrice" | "sellerReceives";
+  useInsurance: boolean;
+  insuranceRate: number; // 0.005
+  // Shipping cost options
+  chargeShippingToSeller: boolean;
+  origin: string;
+  destination: string;
+  shippingType: string;
+  weight: number;
+  competitorPrice?: number;
+  targetMargin?: number;
+};
+
+export type TiktokCalculationResult = {
+  finalPrice: number;
+  adminFee: number;
+  bebasOngkirFee: number;
+  handlingFee: number;
+  preOrderFee: number;
+  affiliateFee: number;
+  insuranceFee: number;
+  shippingFee: number;
+  totalFees: number;
+  sellerReceives: number;
+  ppnFee: number;
+  tax: number; // PPh
+  sellerReceivesAfterTaxAndAffiliate: number;
+  profit: number;
+  margin: number;
+  recommendedPrice: number;
+};
+
+export const tiktokAdminCategories = [
+  { name: "Kategori Grup A (10.0%)", rate: 0.10 },
+  { name: "Kategori Grup B (9.5%)", rate: 0.095 },
+  { name: "Kategori Grup C (9.0%)", rate: 0.09 },
+  { name: "Kategori Grup D (8.25%)", rate: 0.0825 },
+  { name: "Kategori Grup E (7.5%)", rate: 0.075 },
+  { name: "Kategori Grup F (6.5%)", rate: 0.065 },
+  { name: "Kategori Grup G (5.5%)", rate: 0.055 },
+  { name: "Kategori Grup H (4.25%)", rate: 0.0425 },
+  { name: "Kategori Grup I (3.25%)", rate: 0.0325 },
+  { name: "Kategori Grup J (2.5%)", rate: 0.025 },
+  { name: "Kategori Grup K (1.0%)", rate: 0.010 }
+];
+
+export const tiktokBebasOngkirOptions = [
+  { name: "Tidak Ikut (0%)", rate: 0.0 },
+  { name: "Bebas Ongkir Reguler (4.0%)", rate: 0.04 },
+  { name: "Bebas Ongkir Xtra (6.0%)", rate: 0.06 }
+];
+
+export const defaultTiktokInput: TiktokInput = {
+  cost: 66000,
+  targetPrice: 125000,
+  sellerDiscount: 0,
+  adminRate: 0.0825, // Grup D default
+  bebasOngkirRate: 0.04, // 4% default
+  handlingFee: 1250,
+  preOrderRate: 0,
+  affiliateRate: 0,
+  ppnRate: 0,
+  ppnBasis: "finalPrice",
+  useInsurance: false,
+  insuranceRate: 0.005,
+  chargeShippingToSeller: false,
+  origin: "Jawa",
+  destination: "DKI Jakarta",
+  shippingType: "Standard",
+  weight: 1,
+  targetMargin: 20,
+  competitorPrice: 0
+};
+
+export function calculateTiktok(input: TiktokInput, isSolving = false): TiktokCalculationResult {
+  const finalPrice = Math.max(0, input.targetPrice - input.sellerDiscount);
+  const adminFee = finalPrice * input.adminRate;
+  const bebasOngkirFee = finalPrice * input.bebasOngkirRate;
+  const handlingFee = input.handlingFee;
+  const preOrderFee = finalPrice * input.preOrderRate;
+  const affiliateFee = finalPrice * (input.affiliateRate / 100);
+  const insuranceFee = input.useInsurance ? finalPrice * input.insuranceRate : 0;
+  
+  const shippingFee = input.chargeShippingToSeller
+    ? estimateTiktokShipping(input.origin, input.destination, input.shippingType, input.weight)
+    : 0;
+
+  const totalFees = adminFee + bebasOngkirFee + handlingFee + preOrderFee + insuranceFee + shippingFee;
+  const sellerReceives = Math.max(0, finalPrice - totalFees);
+
+  let ppnFee = 0;
+  if (input.ppnRate > 0) {
+    ppnFee = input.ppnBasis === "finalPrice" ? finalPrice * input.ppnRate : sellerReceives * input.ppnRate;
+  }
+
+  // PPh is 0.5% of sellerReceives
+  const tax = sellerReceives * 0.005;
+
+  const sellerReceivesAfterTaxAndAffiliate = Math.max(0, sellerReceives - affiliateFee - tax - ppnFee);
+  const profit = sellerReceivesAfterTaxAndAffiliate - input.cost;
+  const margin = finalPrice > 0 ? profit / finalPrice : 0;
+
+  // Bisection solver for recommendedPrice
+  let recommendedPrice = 0;
+  if (!isSolving) {
+    const targetMargin = (input.targetMargin ?? 20) / 100;
+    let low = input.cost;
+    let high = input.cost * 10;
+    if (high < 100000) high = 1000000;
+    
+    for (let i = 0; i < 50; i++) {
+      const mid = (low + high) / 2;
+      const testInput = { ...input, targetPrice: mid };
+      const testRes = calculateTiktok(testInput, true);
+      if (testRes.profit / testRes.finalPrice < targetMargin) {
+        low = mid;
+      } else {
+        high = mid;
+      }
+    }
+    recommendedPrice = Math.round((low + high) / 2);
+  }
+
+  return {
+    finalPrice,
+    adminFee,
+    bebasOngkirFee,
+    handlingFee,
+    preOrderFee,
+    affiliateFee,
+    insuranceFee,
+    shippingFee,
+    totalFees,
+    sellerReceives,
+    ppnFee,
+    tax,
+    sellerReceivesAfterTaxAndAffiliate,
+    profit,
+    margin,
+    recommendedPrice
+  };
+}

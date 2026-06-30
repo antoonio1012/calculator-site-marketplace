@@ -5,6 +5,7 @@ import {
   getWeightBucketIndex,
   mapProvinceToZone,
   mapShippingType,
+  calculateTiktok,
 } from "./tiktok";
 
 describe("Shopee calculator", () => {
@@ -89,5 +90,37 @@ describe("TikTok calculator", () => {
     expect(mapProvinceToZone("Jawa Barat")).toBe("Jawa");
     expect(mapProvinceToZone("Papua Barat")).toBe("Papua & Maluku");
     expect(mapProvinceToZone("Unknown Province")).toBe("Cek Manual");
+  });
+
+  it("calculates platform fees and recommended price", () => {
+    const result = calculateTiktok({
+      cost: 66000,
+      targetPrice: 125000,
+      sellerDiscount: 0,
+      adminRate: 0.0825,
+      bebasOngkirRate: 0.04,
+      handlingFee: 1250,
+      preOrderRate: 0,
+      affiliateRate: 0,
+      ppnRate: 0,
+      ppnBasis: "finalPrice",
+      useInsurance: false,
+      insuranceRate: 0.005,
+      chargeShippingToSeller: false,
+      origin: "Jawa",
+      destination: "DKI Jakarta",
+      shippingType: "Standard",
+      weight: 1,
+      targetMargin: 20
+    });
+
+    expect(result.finalPrice).toBe(125000);
+    expect(result.adminFee).toBe(10312.5);
+    expect(result.bebasOngkirFee).toBe(5000);
+    expect(result.handlingFee).toBe(1250);
+    expect(result.totalFees).toBe(16562.5);
+    expect(result.sellerReceives).toBe(108437.5);
+    expect(result.sellerReceivesAfterTaxAndAffiliate).toBeCloseTo(107895.31, 1);
+    expect(result.profit).toBeCloseTo(41895.31, 1);
   });
 });
