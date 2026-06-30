@@ -63,6 +63,59 @@ describe("Shopee calculator", () => {
     // Let's expect the solver's exact output.
     expect(result.recommendedPrice).toBeCloseTo(170995.21, 1);
   });
+
+  it("calculates with dimensions, level toko, payment rate, ad cost, and PPN on platform fees", () => {
+    const result = calculateShopee({
+      cost: 66000,
+      targetPrice: 125000,
+      sellerDiscount: 0,
+      adminCategory: "Alat & Aksesoris Musik",
+      
+      packageWeight: 1,
+      packageLength: 65,
+      packageWidth: 10,
+      packageHeight: 10,
+      freeShippingGroup: "E",
+
+      promo: "Setelah 11 Sept",
+      preOrder: "Tidak Ikut",
+      sellerLevel: "mall",
+      paymentRate: 2.0,
+      
+      affiliateRate: 5,
+      platformDiscount: 10000,
+      
+      useHemat: false,
+      useInsurance: false,
+      usePph: true,
+      ppnRate: 0.11,
+      ppnBasis: "platformFees",
+      adCost: 5000,
+    });
+
+    expect(result.finalPrice).toBe(125000);
+    expect(result.adminRate).toBe(0.115);
+    expect(result.adminFee).toBe(14375);
+    
+    expect(result.isSpecialSize).toBe(true);
+    expect(result.freeShippingRate).toBe(0.075);
+    expect(result.freeShippingFee).toBe(9375);
+    
+    expect(result.promoFee).toBe(5625);
+    expect(result.paymentFee).toBe(2500);
+    expect(result.processingFee).toBe(1250);
+    
+    expect(result.totalFees).toBe(33125);
+    expect(result.sellerReceives).toBe(91875);
+    expect(result.affiliateFee).toBe(5750);
+    expect(result.tax).toBe(459.375);
+    expect(result.ppnFee).toBe(3643.75);
+    
+    expect(result.sellerReceivesAfterTaxAndAffiliate).toBeCloseTo(82021.88, 1);
+    expect(result.profit).toBeCloseTo(11021.88, 1);
+    expect(result.acos).toBe(4.0);
+    expect(result.roas).toBe(25.0);
+  });
 });
 
 describe("TikTok calculator", () => {

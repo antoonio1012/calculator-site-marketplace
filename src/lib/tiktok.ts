@@ -108,9 +108,14 @@ export type TiktokInput = {
   preOrderRate: number; // e.g. 0.03
   affiliateRate: number; // percentage (e.g. 2 for 2%)
   ppnRate: number; // e.g. 0.11
-  ppnBasis: "finalPrice" | "sellerReceives";
+  ppnBasis: "finalPrice" | "sellerReceives" | "platformFees";
   useInsurance: boolean;
   insuranceRate: number; // 0.005
+  usePph: boolean; // PPh 0.5% toggle
+  platformDiscount: number; // Voucher Tokopedia/TikTok
+  paymentRate: number; // e.g. 2.0%
+  adCost: number; // Rp
+  
   // Shipping cost options
   chargeShippingToSeller: boolean;
   origin: string;
@@ -130,6 +135,7 @@ export type TiktokCalculationResult = {
   affiliateFee: number;
   insuranceFee: number;
   shippingFee: number;
+  paymentFee: number;
   totalFees: number;
   sellerReceives: number;
   ppnFee: number;
@@ -137,7 +143,10 @@ export type TiktokCalculationResult = {
   sellerReceivesAfterTaxAndAffiliate: number;
   profit: number;
   margin: number;
+  acos: number;
+  roas: number;
   recommendedPrice: number;
+  buyerPayment: number;
 };
 
 export const tiktokAdminCategories = [
@@ -173,6 +182,10 @@ export const defaultTiktokInput: TiktokInput = {
   ppnBasis: "finalPrice",
   useInsurance: false,
   insuranceRate: 0.005,
+  usePph: true,
+  platformDiscount: 0,
+  paymentRate: 2.0,
+  adCost: 0,
   chargeShippingToSeller: false,
   origin: "Jawa",
   destination: "DKI Jakarta",
@@ -182,47 +195,88 @@ export const defaultTiktokInput: TiktokInput = {
   competitorPrice: 0
 };
 
-export function calculateTiktok(input: TiktokInput, isSolving = false): TiktokCalculationResult {
-  const finalPrice = Math.max(0, input.targetPrice - input.sellerDiscount);
-  const adminFee = finalPrice * input.adminRate;
-  const bebasOngkirFee = finalPrice * input.bebasOngkirRate;
-  const handlingFee = input.handlingFee;
-  const preOrderFee = finalPrice * input.preOrderRate;
-  const affiliateFee = finalPrice * (input.affiliateRate / 100);
-  const insuranceFee = input.useInsurance ? finalPrice * input.insuranceRate : 0;
+export function calculateTiktok(input: Partial<TiktokInput> & { cost: number; targetPrice: number; sellerDiscount: number }, isSolving = false): TiktokCalculationResult {
+  const {
+    cost,
+    targetPrice,
+    sellerDiscount,
+    adminRate = 0.0825,
+    bebasOngkirRate = 0.04,
+    handlingFee = 1250,
+    preOrderRate = 0,
+    affiliateRate = 0,
+    ppnRate = 0,
+    ppnBasis = "finalPrice",
+    useInsurance = false,
+    insuranceRate = 0.005,
+    usePph = true,
+    platformDiscount = 0,
+    paymentRate = 0,
+    adCost = 0,
+    chargeShippingToSeller = false,
+    origin = "Jawa",
+    destination = "DKI Jakarta",
+    shippingType = "Standard",
+    weight = 1,
+    targetMargin = 20,
+  } = input;
+
+  const finalPrice = Math.max(0, targetPrice - sellerDiscount);
+  const adminFee = finalPrice * adminRate;
+  const bebasOngkirFee = finalPrice * bebasOngkirRate;
+  const handlingFeeVal = handlingFee;
+  const preOrderFee = finalPrice * preOrderRate;
+  const insuranceFee = useInsurance ? finalPrice * insuranceRate : 0;
   
-  const shippingFee = input.chargeShippingToSeller
-    ? estimateTiktokShipping(input.origin, input.destination, input.shippingType, input.weight)
+  const shippingFee = chargeShippingToSeller
+    ? estimateTiktokShipping(origin, destination, shippingType, weight)
     : 0;
 
-  const totalFees = adminFee + bebasOngkirFee + handlingFee + preOrderFee + insuranceFee + shippingFee;
+  const paymentFee = finalPrice * (paymentRate / 100);
+
+  const totalFees = adminFee + bebasOngkirFee + handlingFeeVal + preOrderFee + insuranceFee + shippingFee + paymentFee;
   const sellerReceives = Math.max(0, finalPrice - totalFees);
 
   let ppnFee = 0;
-  if (input.ppnRate > 0) {
-    ppnFee = input.ppnBasis === "finalPrice" ? finalPrice * input.ppnRate : sellerReceives * input.ppnRate;
+  if (ppnRate > 0) {
+    if (ppnBasis === "finalPrice") {
+      ppnFee = finalPrice * ppnRate;
+    } else if (ppnBasis === "sellerReceives") {
+      ppnFee = sellerReceives * ppnRate;
+    } else {
+      ppnFee = totalFees * ppnRate; // PPN 11%/12% of total platform fees
+    }
   }
 
   // PPh is 0.5% of sellerReceives
-  const tax = sellerReceives * 0.005;
+  const tax = usePph ? sellerReceives * 0.005 : 0;
+
+  // Affiliate Fee based on buyer payment (after platform discounts)
+  const buyerPayment = Math.max(0, finalPrice - platformDiscount);
+  const affiliateFee = buyerPayment * (affiliateRate / 100);
 
   const sellerReceivesAfterTaxAndAffiliate = Math.max(0, sellerReceives - affiliateFee - tax - ppnFee);
-  const profit = sellerReceivesAfterTaxAndAffiliate - input.cost;
-  const margin = finalPrice > 0 ? profit / finalPrice : 0;
+  
+  const profit = sellerReceivesAfterTaxAndAffiliate - cost - adCost;
+  const margin = sellerReceivesAfterTaxAndAffiliate > 0 ? profit / sellerReceivesAfterTaxAndAffiliate : 0;
+
+  const acos = finalPrice > 0 ? (adCost / finalPrice) * 100 : 0;
+  const roas = adCost > 0 ? finalPrice / adCost : 0;
 
   // Bisection solver for recommendedPrice
   let recommendedPrice = 0;
   if (!isSolving) {
-    const targetMargin = (input.targetMargin ?? 20) / 100;
-    let low = input.cost;
-    let high = input.cost * 10;
+    const targetMarginVal = targetMargin / 100;
+    let low = cost;
+    let high = cost * 10;
     if (high < 100000) high = 1000000;
     
     for (let i = 0; i < 50; i++) {
       const mid = (low + high) / 2;
       const testInput = { ...input, targetPrice: mid };
       const testRes = calculateTiktok(testInput, true);
-      if (testRes.profit / testRes.finalPrice < targetMargin) {
+      const testMargin = testRes.profit / testRes.sellerReceivesAfterTaxAndAffiliate;
+      if (testMargin < targetMarginVal) {
         low = mid;
       } else {
         high = mid;
@@ -235,11 +289,12 @@ export function calculateTiktok(input: TiktokInput, isSolving = false): TiktokCa
     finalPrice,
     adminFee,
     bebasOngkirFee,
-    handlingFee,
+    handlingFee: handlingFeeVal,
     preOrderFee,
     affiliateFee,
     insuranceFee,
     shippingFee,
+    paymentFee,
     totalFees,
     sellerReceives,
     ppnFee,
@@ -247,6 +302,9 @@ export function calculateTiktok(input: TiktokInput, isSolving = false): TiktokCa
     sellerReceivesAfterTaxAndAffiliate,
     profit,
     margin,
-    recommendedPrice
+    acos,
+    roas,
+    recommendedPrice,
+    buyerPayment
   };
 }
