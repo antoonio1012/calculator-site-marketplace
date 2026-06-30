@@ -209,7 +209,7 @@ export function calculateShopee(input: Partial<ShopeeInput> & { cost: number; ta
     } else if (ppnBasis === "sellerReceives") {
       ppnFee = sellerReceives * ppnRate;
     } else {
-      ppnFee = totalFees * ppnRate; // PPN 11%/12% of total platform fees
+      ppnFee = (totalFees + affiliateFee) * ppnRate; // PPN 11%/12% of total platform fees (including affiliate fee)
     }
   }
 

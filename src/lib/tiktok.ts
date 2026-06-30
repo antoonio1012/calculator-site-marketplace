@@ -237,6 +237,10 @@ export function calculateTiktok(input: Partial<TiktokInput> & { cost: number; ta
   const totalFees = adminFee + bebasOngkirFee + handlingFeeVal + preOrderFee + insuranceFee + shippingFee + paymentFee;
   const sellerReceives = Math.max(0, finalPrice - totalFees);
 
+  // Affiliate Fee based on buyer payment (after platform discounts)
+  const buyerPayment = Math.max(0, finalPrice - platformDiscount);
+  const affiliateFee = buyerPayment * (affiliateRate / 100);
+
   let ppnFee = 0;
   if (ppnRate > 0) {
     if (ppnBasis === "finalPrice") {
@@ -244,16 +248,12 @@ export function calculateTiktok(input: Partial<TiktokInput> & { cost: number; ta
     } else if (ppnBasis === "sellerReceives") {
       ppnFee = sellerReceives * ppnRate;
     } else {
-      ppnFee = totalFees * ppnRate; // PPN 11%/12% of total platform fees
+      ppnFee = (totalFees + affiliateFee) * ppnRate; // PPN 11%/12% of total platform fees (including affiliate fee)
     }
   }
 
   // PPh is 0.5% of sellerReceives
   const tax = usePph ? sellerReceives * 0.005 : 0;
-
-  // Affiliate Fee based on buyer payment (after platform discounts)
-  const buyerPayment = Math.max(0, finalPrice - platformDiscount);
-  const affiliateFee = buyerPayment * (affiliateRate / 100);
 
   const sellerReceivesAfterTaxAndAffiliate = Math.max(0, sellerReceives - affiliateFee - tax - ppnFee);
   

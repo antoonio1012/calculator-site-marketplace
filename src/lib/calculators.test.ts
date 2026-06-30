@@ -111,10 +111,10 @@ describe("Shopee calculator", () => {
     expect(result.sellerReceives).toBe(93750);
     expect(result.affiliateFee).toBe(5750);
     expect(result.tax).toBe(468.75);
-    expect(result.ppnFee).toBe(3437.5);
+    expect(result.ppnFee).toBe(4070);
     
-    expect(result.sellerReceivesAfterTaxAndAffiliate).toBeCloseTo(84093.75, 1);
-    expect(result.profit).toBeCloseTo(13093.75, 1);
+    expect(result.sellerReceivesAfterTaxAndAffiliate).toBeCloseTo(83461.25, 1);
+    expect(result.profit).toBeCloseTo(12461.25, 1);
     expect(result.acos).toBe(4.0);
     expect(result.roas).toBe(25.0);
   });
