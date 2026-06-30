@@ -345,15 +345,25 @@ function ShopeeSingle() {
           {/* Section 3: Komisi & Pajak */}
           <div className="form-section-title">💸 Komisi & Pajak Tambahan</div>
           <Field label="Komisi Affiliate (%)">
-            <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-              <NumberInput value={input.affiliateRate} step={0.1} min={0} onChange={(value) => patch("affiliateRate", value)} />
-              <div className="quick-btn-container">
+            <div style={{ display: 'flex', gap: '6px', alignItems: 'center', width: '100%', height: '40px' }}>
+              <div style={{ flex: '1', minWidth: '50px' }}>
+                <NumberInput value={input.affiliateRate} step={0.1} min={0} onChange={(value) => patch("affiliateRate", value)} />
+              </div>
+              <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
                 {[0, 2, 5, 10].map((pct) => (
                   <button
                     type="button"
                     key={pct}
                     onClick={() => patch("affiliateRate", pct)}
                     className={`quick-btn ${input.affiliateRate === pct ? 'active' : ''}`}
+                    style={{
+                      padding: '0 6px',
+                      height: '34px',
+                      lineHeight: '34px',
+                      fontSize: '11px',
+                      minWidth: '32px',
+                      textAlign: 'center'
+                    }}
                   >
                     {pct}%
                   </button>
