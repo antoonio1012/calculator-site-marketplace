@@ -93,7 +93,37 @@ function NumberInput({
   step?: number;
   min?: number;
 }) {
-  return <input type="number" value={value} step={step} min={min} onChange={(event) => onChange(toNumber(event.target.value))} />;
+  const [localValue, setLocalValue] = React.useState<string>(String(value));
+
+  React.useEffect(() => {
+    const parsedLocal = toNumber(localValue);
+    if (parsedLocal !== value) {
+      setLocalValue(String(value));
+    }
+  }, [value]);
+
+  return (
+    <input
+      type="number"
+      value={localValue}
+      step={step}
+      min={min}
+      onChange={(event) => {
+        const val = event.target.value;
+        setLocalValue(val);
+        const parsed = toNumber(val);
+        onChange(parsed);
+      }}
+      onBlur={() => {
+        if (localValue === "") {
+          setLocalValue("0");
+          onChange(0);
+        } else {
+          setLocalValue(String(toNumber(localValue)));
+        }
+      }}
+    />
+  );
 }
 
 function SearchableSelect({
