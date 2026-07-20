@@ -141,7 +141,12 @@ export function calculateShopee(input: Partial<ShopeeInput> & { cost: number; ta
   const hasDimensions = packageLength > 0 || packageWidth > 0 || packageHeight > 0;
   const hasWeight = packageWeight > 0;
 
-  if ((hasDimensions || hasWeight) && freeShippingGroup !== "manual") {
+  if (freeShippingGroup === "none") {
+    freeShippingRate = 0;
+    freeShippingCap = 0;
+    isSpecialSize = false;
+    usedAutoShipping = false;
+  } else if ((hasDimensions || hasWeight) && freeShippingGroup !== "manual") {
     const volume = packageLength * packageWidth * packageHeight;
     isSpecialSize = 
       packageWeight >= 5 || 

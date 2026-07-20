@@ -1670,6 +1670,11 @@ export const shopeePromoOptions = [
 
 export const shopeeFreeShippingOptions = [
   {
+    "name": "Tidak Ikut (0%)",
+    "rate": 0,
+    "cap": 0
+  },
+  {
     "name": "Ukuran Biasa - A",
     "rate": 0.01,
     "cap": 40000

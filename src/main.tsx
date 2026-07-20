@@ -356,9 +356,6 @@ function ShopeeSingle() {
           <Field label="HPP / modal (Rp)">
             <NumberInput value={input.cost} min={0} isCurrency={true} onChange={(value) => patch("cost", value)} />
           </Field>
-          <Field label="Target Margin (%)">
-            <NumberInput value={input.targetMargin ?? 20} step={1} min={0} onChange={(value) => patch("targetMargin", value)} />
-          </Field>
           <Field label="Target harga jual (Rp)">
             <NumberInput value={input.targetPrice} min={0} isCurrency={true} onChange={(value) => patch("targetPrice", value)} />
           </Field>
@@ -395,6 +392,7 @@ function ShopeeSingle() {
           </Field>
           <Field label="Grup Gratis Ongkir Xtra">
             <select value={input.freeShippingGroup} onChange={(e) => patch("freeShippingGroup", e.target.value)}>
+              <option value="none">Tidak Ikut (0%)</option>
               {shopeeFreeShippingGroups.map((g) => (
                 <option value={g.code} key={g.code}>{g.name}</option>
               ))}
@@ -499,7 +497,6 @@ function ShopeeSingle() {
             <select value={input.ppnRate} onChange={(event) => patch("ppnRate", toNumber(event.target.value))}>
               <option value={0}>Tidak Ada PPN (0%)</option>
               <option value={0.11}>PPN 11%</option>
-              <option value={0.12}>PPN 12%</option>
             </select>
           </Field>
           {input.ppnRate > 0 && (
@@ -542,8 +539,6 @@ function ShopeeSingle() {
 }
 
 function ShopeeResults({ result, input }: { result: ReturnType<typeof calculateShopee>; input: ShopeeInput }) {
-  const recResult = calculateShopee({ ...input, targetPrice: result.recommendedPrice }, true);
-  
   const competitorPrice = input.competitorPrice;
   let compResult = null;
   if (competitorPrice && competitorPrice > 0) {
@@ -568,7 +563,7 @@ function ShopeeResults({ result, input }: { result: ReturnType<typeof calculateS
           <strong style={{ fontSize: '24px', fontWeight: '700', marginTop: '6px' }}>
             {rupiah.format(result.profit)} ({formatPercent(result.margin)})
           </strong>
-          <span style={{ fontSize: '11px', opacity: 0.75, marginTop: '4px' }}>Target Margin: {input.targetMargin}%</span>
+          <span style={{ fontSize: '11px', opacity: 0.75, marginTop: '4px' }}>Dihitung dari Dana Net</span>
         </div>
       </div>
 
@@ -585,7 +580,6 @@ function ShopeeResults({ result, input }: { result: ReturnType<typeof calculateS
 
       <div className="metrics" style={{ marginBottom: '16px' }}>
         <Metric label="Harga Final Customer" value={rupiah.format(result.finalPrice)} />
-        <Metric label="Rekomendasi Harga Jual" value={rupiah.format(result.recommendedPrice)} />
       </div>
 
       <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: '#16201b' }}>Rincian Biaya & Potongan</h3>
@@ -722,13 +716,10 @@ function ShopeeResults({ result, input }: { result: ReturnType<typeof calculateS
 
       <div className="explanation-card" style={{ marginTop: '16px', padding: '12px', border: '1px dashed #1d6f52', borderRadius: '8px', background: '#f0f7f4', fontSize: '12px', color: '#27523f', lineHeight: '1.4' }}>
         <h4 style={{ margin: '0 0 6px 0', fontSize: '13px', fontWeight: '700', color: '#114c37' }}>
-          💡 Apa beda Target Harga vs Rekomendasi Harga?
+          💡 Rangkuman Perhitungan
         </h4>
-        <p style={{ marginBottom: '6px' }}>
-          <strong>Target Harga ({rupiah.format(result.finalPrice)})</strong> adalah harga yang Anda masukkan saat ini. Setelah dikurangi biaya layanan, affiliate, iklan, dan pajak, profit bersih nyata Anda adalah <strong>{rupiah.format(result.profit)}</strong> (Margin <strong>{formatPercent(result.margin)}</strong>).
-        </p>
-        <p>
-          <strong>Rekomendasi Harga ({rupiah.format(result.recommendedPrice)})</strong> adalah harga jual ideal yang disarankan. Jika Anda menjual di harga ini, Anda akan menerima dana bersih yang setara dengan target margin Anda ({input.targetMargin}%) setelah menutupi HPP dan biaya iklan, menghasilkan profit bersih <strong>{rupiah.format(recResult.profit)}</strong> (Margin <strong>{formatPercent(recResult.margin)}</strong>).
+        <p style={{ margin: 0 }}>
+          Dengan menjual di harga <strong>{rupiah.format(result.finalPrice)}</strong>, setelah dikurangi biaya layanan, affiliate, iklan, dan pajak, profit bersih nyata Anda adalah <strong>{rupiah.format(result.profit)}</strong> (Margin <strong>{formatPercent(result.margin)}</strong>).
         </p>
       </div>
 
@@ -789,9 +780,8 @@ function ShopeeBatch() {
       finalPrice: sum.finalPrice + item.result.finalPrice,
       fees: sum.fees + item.result.totalFees + item.result.affiliateFee + item.result.tax + item.result.ppnFee,
       profit: sum.profit + item.result.profit,
-      recommended: sum.recommended + item.result.recommendedPrice,
     }),
-    { finalPrice: 0, fees: 0, profit: 0, recommended: 0 },
+    { finalPrice: 0, fees: 0, profit: 0 },
   );
 
   function update(id: number, patch: Partial<ShopeeRow>) {
@@ -818,7 +808,6 @@ function ShopeeBatch() {
           <select value={globalPpnRate} onChange={(event) => setGlobalPpnRate(toNumber(event.target.value))}>
             <option value={0}>Tidak Ada PPN (0%)</option>
             <option value={0.11}>PPN 11%</option>
-            <option value={0.12}>PPN 12%</option>
           </select>
         </div>
         {globalPpnRate > 0 && (
@@ -850,7 +839,7 @@ function ShopeeBatch() {
         <table>
           <thead>
             <tr>
-              <th>Produk</th><th>HPP</th><th>Untung Bersih</th><th>Diskon</th><th>Affiliate (%)</th><th>Kategori</th><th>Ongkir</th><th>Promo</th><th>Diterima Net</th><th>Profit Net</th><th>Rekomendasi</th><th></th>
+              <th>Produk</th><th>HPP</th><th>Untung Bersih</th><th>Diskon</th><th>Affiliate (%)</th><th>Kategori</th><th>Ongkir</th><th>Promo</th><th>Diterima Net</th><th>Profit Net</th><th></th>
             </tr>
           </thead>
           <tbody>
@@ -870,7 +859,6 @@ function ShopeeBatch() {
                 <td><select value={row.promo} onChange={(event) => update(row.id, { promo: event.target.value })}>{shopeePromoOptions.map((item) => <option key={item.name}>{item.name}</option>)}</select></td>
                 <td>{rupiah.format(result.sellerReceivesAfterTaxAndAffiliate)}</td>
                 <td className={result.profit >= 0 ? "positive" : "negative"}>{rupiah.format(result.profit)}</td>
-                <td>{rupiah.format(result.recommendedPrice)}</td>
                 <td><button className="icon" onClick={() => setRows((current) => current.filter((item) => item.id !== row.id))}><Trash2 size={16} /></button></td>
               </tr>
             ))}
@@ -881,7 +869,6 @@ function ShopeeBatch() {
         <Metric label="GMV final" value={rupiah.format(totals.finalPrice)} />
         <Metric label="Total Potongan (Fee & Pajak)" value={rupiah.format(totals.fees)} />
         <Metric label="Total profit" value={rupiah.format(totals.profit)} tone={totals.profit >= 0 ? "good" : "bad"} />
-        <Metric label="Rekomendasi total" value={rupiah.format(totals.recommended)} />
       </div>
     </section>
   );
@@ -920,9 +907,6 @@ function TiktokSingle() {
           <div className="form-section-title">📊 Informasi Produk & Target</div>
           <Field label="HPP / modal (Rp)">
             <NumberInput value={input.cost} min={0} isCurrency={true} onChange={(value) => patch("cost", value)} />
-          </Field>
-          <Field label="Target Margin (%)">
-            <NumberInput value={input.targetMargin ?? 20} step={1} min={0} onChange={(value) => patch("targetMargin", value)} />
           </Field>
           <Field label="Target harga jual (Rp)">
             <NumberInput value={input.targetPrice} min={0} isCurrency={true} onChange={(value) => patch("targetPrice", value)} />
@@ -1018,7 +1002,6 @@ function TiktokSingle() {
             <select value={input.ppnRate} onChange={(event) => patch("ppnRate", toNumber(event.target.value))}>
               <option value={0}>Tidak Ada PPN (0%)</option>
               <option value={0.11}>PPN 11%</option>
-              <option value={0.12}>PPN 12%</option>
             </select>
           </Field>
           {input.ppnRate > 0 && (
@@ -1091,8 +1074,6 @@ function TiktokSingle() {
 }
 
 function TiktokResults({ result, input }: { result: TiktokCalculationResult; input: TiktokInput }) {
-  const recResult = calculateTiktok({ ...input, targetPrice: result.recommendedPrice }, true);
-  
   const competitorPrice = input.competitorPrice;
   let compResult = null;
   if (competitorPrice && competitorPrice > 0) {
@@ -1117,7 +1098,7 @@ function TiktokResults({ result, input }: { result: TiktokCalculationResult; inp
           <strong style={{ fontSize: '24px', fontWeight: '700', marginTop: '6px' }}>
             {rupiah.format(result.profit)} ({formatPercent(result.margin)})
           </strong>
-          <span style={{ fontSize: '11px', opacity: 0.75, marginTop: '4px' }}>Target Margin: {input.targetMargin}%</span>
+          <span style={{ fontSize: '11px', opacity: 0.75, marginTop: '4px' }}>Dihitung dari Dana Net</span>
         </div>
       </div>
 
@@ -1134,7 +1115,6 @@ function TiktokResults({ result, input }: { result: TiktokCalculationResult; inp
 
       <div className="metrics" style={{ marginBottom: '16px' }}>
         <Metric label="Harga Final Customer" value={rupiah.format(result.finalPrice)} />
-        <Metric label="Rekomendasi Harga Jual" value={rupiah.format(result.recommendedPrice)} />
       </div>
 
       <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: '#16201b' }}>Rincian Biaya & Potongan</h3>
@@ -1258,13 +1238,10 @@ function TiktokResults({ result, input }: { result: TiktokCalculationResult; inp
 
       <div className="explanation-card" style={{ marginTop: '16px', padding: '12px', border: '1px dashed #1d6f52', borderRadius: '8px', background: '#f0f7f4', fontSize: '12px', color: '#27523f', lineHeight: '1.4' }}>
         <h4 style={{ margin: '0 0 6px 0', fontSize: '13px', fontWeight: '700', color: '#114c37' }}>
-          💡 Penjelasan Perhitungan TikTok Shop
+          💡 Rangkuman Perhitungan TikTok Shop
         </h4>
-        <p style={{ marginBottom: '6px' }}>
-          <strong>Harga Jual ({rupiah.format(result.finalPrice)})</strong> menghasilkan profit bersih nyata sebesar <strong>{rupiah.format(result.profit)}</strong> (Margin <strong>{formatPercent(result.margin)}</strong>).
-        </p>
-        <p>
-          <strong>Rekomendasi Harga ({rupiah.format(result.recommendedPrice)})</strong> disarankan agar Anda memperoleh profit bersih yang sesuai dengan target margin awal Anda ({input.targetMargin}%) setelah menutupi HPP dan biaya iklan, menghasilkan dana bersih <strong>{rupiah.format(recResult.sellerReceivesAfterTaxAndAffiliate)}</strong> dan profit bersih <strong>{rupiah.format(recResult.profit)}</strong> (Margin <strong>{formatPercent(recResult.margin)}</strong>).
+        <p style={{ margin: 0 }}>
+          Dengan menjual di harga <strong>{rupiah.format(result.finalPrice)}</strong>, setelah dikurangi biaya layanan, affiliate, iklan, dan pajak, profit bersih nyata Anda adalah <strong>{rupiah.format(result.profit)}</strong> (Margin <strong>{formatPercent(result.margin)}</strong>).
         </p>
       </div>
 
