@@ -3,6 +3,25 @@ export type ShopeeAdminCategory = {
   name: string;
   detail: string;
   rate: number;
+  /** Shopee Mall rate when it differs from the regular seller rate. */
+  mallRate?: number;
+};
+
+// Mall rates supplied in the Shopee Mall table. Categories not listed here use
+// the regular rate until their Mall row is added to the source workbook.
+export const shopeeMallRateOverrides: Record<string, number> = {
+  "Aksesoris Rambut": 0.102,
+  "Masker": 0.1045,
+  "Logam Mulia": 0.032,
+  "Alat & Aksesoris Musik": 0.077,
+  "Tas Duffel": 0.117,
+  "Kaos Kaki": 0.102,
+  "Kaos Kaki & Stocking": 0.102,
+  "Handphone": 0.047,
+  "Tablet": 0.047,
+  "Desktop": 0.042,
+  "Mobil": 0.025,
+  "Sepeda Motor": 0.025,
 };
 
 export type FeeOption = {

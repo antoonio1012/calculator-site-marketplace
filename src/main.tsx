@@ -379,7 +379,7 @@ function ShopeeSingle() {
             <select value={input.sellerLevel} onChange={(e) => patch("sellerLevel", e.target.value)}>
               <option value="star">Star / Star+ / Non-Star (Aktif &gt;= 6 Bulan)</option>
               <option value="nonstar_new">Non-Star (Baru, Aktif &lt; 6 Bulan - Bebas Admin)</option>
-              <option value="mall">Shopee Mall (+2% Admin Premium)</option>
+              <option value="mall">Shopee Mall (Tarif Mall)</option>
             </select>
           </Field>
           <Field label="Kategori admin">

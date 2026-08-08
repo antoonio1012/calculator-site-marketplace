@@ -1,5 +1,6 @@
 import {
   shopeeAdminCategories,
+  shopeeMallRateOverrides,
   shopeeFreeShippingOptions,
   shopeePreOrderOptions,
   shopeePromoOptions,
@@ -59,8 +60,12 @@ export const shopeeFreeShippingGroups = [
   { name: "Grup H (Lainnya - 8.0% / 9.5%)", code: "H", biasa: 0.08, khusus: 0.095 }
 ];
 
-export function getAdminRate(categoryName: string) {
-  return shopeeAdminCategories.find((item) => item.name === categoryName)?.rate ?? 0;
+export function getAdminRate(categoryName: string, sellerLevel: ShopeeInput["sellerLevel"] = "star") {
+  const category = shopeeAdminCategories.find((item) => item.name === categoryName);
+  if (!category) return 0;
+  return sellerLevel === "mall"
+    ? (shopeeMallRateOverrides[category.name] ?? category.rate)
+    : category.rate;
 }
 
 export function getFreeShippingOption(name: string) {
@@ -124,11 +129,9 @@ export function calculateShopee(input: Partial<ShopeeInput> & { cost: number; ta
   const finalPrice = Math.max(0, targetPrice - sellerDiscount);
   
   // 1. Admin Rate based on Seller Level
-  let adminRate = getAdminRate(adminCategory);
+  let adminRate = getAdminRate(adminCategory, sellerLevel);
   if (sellerLevel === "nonstar_new") {
     adminRate = 0; // 0% admin fee for new non-star
-  } else if (sellerLevel === "mall") {
-    adminRate = adminRate + 0.02; // Mall surcharge of +2%
   }
   const adminFee = finalPrice * adminRate;
 
